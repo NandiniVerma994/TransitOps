@@ -1,16 +1,23 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './features/auth/LoginPage';
+
+// Placeholder for Dashboard until we build it
+const DashboardPlaceholder = () => (
+  <div className="flex h-screen items-center justify-center bg-gray-900 text-white">
+    <h1 className="text-4xl font-bold text-orange-500">Dashboard Coming Soon</h1>
+  </div>
+);
 
 function App() {
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-900 text-white">
-      <h1 className="text-4xl font-bold text-blue-500">TransitOps Dashboard</h1>
-    </div>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/dashboard" element={<DashboardPlaceholder />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
-
+export default App;
