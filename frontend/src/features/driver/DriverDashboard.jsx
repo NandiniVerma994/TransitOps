@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useFleetStore from '../../store/useFleetStore';
-import { Truck, LogOut, CheckCircle } from 'lucide-react';
+import { useAuthStore } from '../../store/useAuthStore';
+import { Truck, LogOut, CheckCircle, Settings } from 'lucide-react';
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
   const { trips, vehicles, drivers, completeTrip } = useFleetStore();
+  const { user, logout } = useAuthStore();
   
-  // For simulation, we assume driver 'd2' (Sam Rivera) is logged in.
-  // In a real app, this comes from an Auth Context.
-  const loggedInDriverId = 'd2'; 
+  // Find driver profile by matching name or user email (defaulting to d2 Sam Rivera)
+  const isAlex = user?.email?.toLowerCase().includes('driver.alex');
+  const loggedInDriverId = isAlex 
+    ? (drivers.find(d => d.name === 'Alex Morgan')?.id || 'd1')
+    : 'd2'; 
+    
   const driverProfile = drivers.find(d => d.id === loggedInDriverId);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
   
   // Find the driver's active trip
   const activeTrip = trips.find(t => t.driverId === loggedInDriverId && t.status === 'Dispatched');
@@ -46,9 +56,14 @@ const DriverDashboard = () => {
             <h1 className="text-xl font-bold text-white tracking-tight">Driver Portal</h1>
             <p className="text-sm text-gray-500">Welcome, {driverProfile?.name}</p>
           </div>
-          <button onClick={() => navigate('/')} className="p-3 bg-[#1a1a1a] rounded-full border border-[#222] text-gray-400 hover:text-white hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500 transition-colors">
-            <LogOut size={18} />
-          </button>
+          <div className="flex space-x-2">
+            <button onClick={() => navigate('/settings')} className="p-3 bg-[#1a1a1a] rounded-full border border-[#222] text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/20 hover:text-orange-500 transition-all active:scale-95">
+              <Settings size={18} />
+            </button>
+            <button onClick={handleLogout} className="p-3 bg-[#1a1a1a] rounded-full border border-[#222] text-gray-400 hover:text-white hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500 transition-all active:scale-95">
+              <LogOut size={18} />
+            </button>
+          </div>
         </header>
 
         {/* Content */}

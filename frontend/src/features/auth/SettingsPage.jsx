@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LockKeyhole, KeyRound, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { LockKeyhole, KeyRound, ShieldAlert, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsPage = () => {
@@ -42,6 +42,13 @@ const SettingsPage = () => {
   return (
     <div className="max-w-xl mx-auto space-y-6 font-sans">
       <div>
+        <button 
+          onClick={() => navigate('/dashboard')} 
+          className="flex items-center space-x-2 text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-wider mb-4"
+        >
+          <ArrowLeft size={14} />
+          <span>Back to Dashboard</span>
+        </button>
         <h2 className="text-2xl font-bold mb-1 tracking-tight text-white">Settings</h2>
         <p className="text-gray-400 text-sm">Manage your profile, credentials, and platform configurations.</p>
       </div>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LoginPage from './features/auth/LoginPage';
@@ -10,6 +10,29 @@ import DriverManagementPage from './features/fleet/pages/DriverManagementPage';
 import TripDispatcherPage from './features/fleet/pages/TripDispatcherPage';
 import MaintenancePage from './features/fleet/pages/MaintenancePage';
 import DriverDashboard from './features/driver/DriverDashboard';
+import SettingsPage from './features/auth/SettingsPage';
+
+// Decision router to display either the driver portal or the fleet manager dashboard
+const DashboardRouter = () => {
+  const { user } = useAuthStore();
+  
+  if (user?.role?.toLowerCase() === 'driver') {
+    return <DriverDashboard />;
+  }
+  
+  return <FleetDashboardPage />;
+};
+
+// Layout decider: managers get the Sidebar layout; drivers get the full-screen view
+const MainLayoutRouter = () => {
+  const { user } = useAuthStore();
+  
+  if (user?.role?.toLowerCase() === 'driver') {
+    return <Outlet />;
+  }
+  
+  return <DashboardLayout />;
+};
 
 function App() {
   const { checkSession, isCheckingSession } = useAuthStore();
@@ -36,17 +59,16 @@ function App() {
       <Routes>
         {/* Auth Route */}
         <Route path="/" element={<LoginPage />} />
-        <Route path="/driver-dashboard" element={<DriverDashboard />} />
         
         {/* Protected Dashboard Routes */}
         <Route 
           element={
             <ProtectedRoute>
-              <DashboardLayout />
+              <MainLayoutRouter />
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard" element={<FleetDashboardPage />} />
+          <Route path="/dashboard" element={<DashboardRouter />} />
           
           <Route path="/fleet" element={
             <ProtectedRoute allowedRoles={['Fleet Manager']}>
@@ -66,22 +88,24 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* Temporary placeholders for remaining tabs */}
           <Route path="/maintenance" element={
             <ProtectedRoute allowedRoles={['Fleet Manager']}>
-              <div className="text-white"><h2 className="text-2xl font-bold">Maintenance</h2></div>
+              <MaintenancePage />
             </ProtectedRoute>
           } />
+          
           <Route path="/expenses" element={
             <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst']}>
               <div className="text-white"><h2 className="text-2xl font-bold">Fuel & Expenses</h2></div>
             </ProtectedRoute>
           } />
+          
           <Route path="/analytics" element={
             <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst', 'Safety Officer']}>
               <div className="text-white"><h2 className="text-2xl font-bold">Analytics</h2></div>
             </ProtectedRoute>
           } />
+          
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

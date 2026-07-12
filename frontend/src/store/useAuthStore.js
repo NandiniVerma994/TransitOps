@@ -46,15 +46,8 @@ export const useAuthStore = create((set, get) => {
         set({ user, isAuthenticated: true, isCheckingSession: false });
         return user;
       } catch (err) {
-        // If the initial check fails, try to refresh first before declaring unauthenticated
-        try {
-          const user = await api.post('/api/auth/refresh');
-          set({ user, isAuthenticated: true, isCheckingSession: false });
-          return user;
-        } catch (refreshErr) {
-          set({ user: null, isAuthenticated: false, isCheckingSession: false });
-          return null;
-        }
+        set({ user: null, isAuthenticated: false, isCheckingSession: false });
+        return null;
       }
     },
 
