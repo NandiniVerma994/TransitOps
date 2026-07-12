@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/NandiniVerma994/TransitOps/backend/internal/auth"
@@ -14,21 +12,30 @@ import (
 )
 
 type seedUser struct {
-	email string
-	role  string
+	email    string
+	password string
+	role     string
 }
 
 func main() {
 	cfg := config.Load()
-	password := os.Getenv("SEED_USER_PASSWORD")
-	if password == "" {
-		password = "Password123!"
-	}
 
 	users := []seedUser{
-		{email: "fleet.manager@transitops.local", role: "Fleet Manager"},
-		{email: "safety.officer@transitops.local", role: "Safety Officer"},
-		{email: "finance.analyst@transitops.local", role: "Financial Analyst"},
+		{
+			email:    "fleet.manager@transitops.local",
+			password: "FleetManager@123",
+			role:     "Fleet Manager",
+		},
+		{
+			email:    "safety.officer@transitops.local",
+			password: "SafetyOfficer@123",
+			role:     "Safety Officer",
+		},
+		{
+			email:    "finance.analyst@transitops.local",
+			password: "FinanceAnalyst@123",
+			role:     "Financial Analyst",
+		},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -48,19 +55,15 @@ func main() {
 	)
 
 	for _, user := range users {
-		createdUser, err := service.CreateUser(ctx, auth.CreateUserRequest{
+		seededUser, err := service.EnsureUser(ctx, auth.CreateUserRequest{
 			Email:    user.email,
-			Password: password,
+			Password: user.password,
 			Role:     user.role,
 		})
-		if errors.Is(err, auth.ErrEmailTaken) {
-			fmt.Printf("skipped existing user %s\n", user.email)
-			continue
-		}
 		if err != nil {
 			log.Fatalf("seed user %s: %v", user.email, err)
 		}
 
-		fmt.Printf("seeded user %s with role %s\n", createdUser.Email, createdUser.Role)
+		fmt.Printf("seeded user %s with role %s\n", seededUser.Email, seededUser.Role)
 	}
 }

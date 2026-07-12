@@ -26,16 +26,9 @@ func NewService(repository *Repository, jwtSecret string, tokenTTL time.Duration
 }
 
 func (s *Service) CreateUser(ctx context.Context, request CreateUserRequest) (AuthUser, error) {
-	email, err := normalizeEmail(request.Email)
+	email, passwordHash, role, err := s.validateNewUser(ctx, request)
 	if err != nil {
 		return AuthUser{}, err
-	}
-	if len(request.Password) < 8 {
-		return AuthUser{}, fmt.Errorf("%w: password must be at least 8 characters", ErrValidation)
-	}
-	roleName := strings.TrimSpace(request.Role)
-	if roleName == "" {
-		roleName = s.defaultRoleName
 	}
 
 	_, err = s.repository.FindUserByEmail(ctx, email)
@@ -43,19 +36,6 @@ func (s *Service) CreateUser(ctx context.Context, request CreateUserRequest) (Au
 		return AuthUser{}, ErrEmailTaken
 	}
 	if err != nil && !errors.Is(err, errNotFound) {
-		return AuthUser{}, err
-	}
-
-	role, err := s.repository.FindRoleByName(ctx, roleName)
-	if errors.Is(err, errNotFound) {
-		return AuthUser{}, fmt.Errorf("%w: invalid role", ErrValidation)
-	}
-	if err != nil {
-		return AuthUser{}, fmt.Errorf("find role: %w", err)
-	}
-
-	passwordHash, err := hashPassword(request.Password)
-	if err != nil {
 		return AuthUser{}, err
 	}
 
@@ -70,6 +50,54 @@ func (s *Service) CreateUser(ctx context.Context, request CreateUserRequest) (Au
 	}
 
 	return toAuthUser(user), nil
+}
+
+func (s *Service) EnsureUser(ctx context.Context, request CreateUserRequest) (AuthUser, error) {
+	email, passwordHash, role, err := s.validateNewUser(ctx, request)
+	if err != nil {
+		return AuthUser{}, err
+	}
+
+	user, err := s.repository.UpsertUser(ctx, createUserParams{
+		Email:        email,
+		PasswordHash: passwordHash,
+		RoleID:       role.ID,
+		RoleName:     role.Name,
+	})
+	if err != nil {
+		return AuthUser{}, err
+	}
+
+	return toAuthUser(user), nil
+}
+
+func (s *Service) validateNewUser(ctx context.Context, request CreateUserRequest) (string, string, roleRecord, error) {
+	email, err := normalizeEmail(request.Email)
+	if err != nil {
+		return "", "", roleRecord{}, err
+	}
+	if len(request.Password) < 8 {
+		return "", "", roleRecord{}, fmt.Errorf("%w: password must be at least 8 characters", ErrValidation)
+	}
+	roleName := strings.TrimSpace(request.Role)
+	if roleName == "" {
+		roleName = s.defaultRoleName
+	}
+
+	role, err := s.repository.FindRoleByName(ctx, roleName)
+	if errors.Is(err, errNotFound) {
+		return "", "", roleRecord{}, fmt.Errorf("%w: invalid role", ErrValidation)
+	}
+	if err != nil {
+		return "", "", roleRecord{}, fmt.Errorf("find role: %w", err)
+	}
+
+	passwordHash, err := hashPassword(request.Password)
+	if err != nil {
+		return "", "", roleRecord{}, err
+	}
+
+	return email, passwordHash, role, nil
 }
 
 func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResponse, error) {

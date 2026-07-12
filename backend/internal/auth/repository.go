@@ -108,3 +108,27 @@ func (r *Repository) CreateUser(ctx context.Context, params createUserParams) (u
 	user.RoleName = params.RoleName
 	return user, nil
 }
+
+func (r *Repository) UpsertUser(ctx context.Context, params createUserParams) (userRecord, error) {
+	var user userRecord
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO users (email, password_hash, role_id)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (email) DO UPDATE
+		SET password_hash = EXCLUDED.password_hash,
+			role_id = EXCLUDED.role_id,
+			updated_at = now()
+		RETURNING id, email, password_hash, created_at;
+	`, params.Email, params.PasswordHash, params.RoleID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		return userRecord{}, err
+	}
+
+	user.RoleName = params.RoleName
+	return user, nil
+}

@@ -44,11 +44,14 @@ Seed default company accounts, excluding drivers:
 go run ./cmd/seed
 ```
 
-Default seeded users use `SEED_USER_PASSWORD`:
+The seed command upserts these users. Plain passwords are used only as seed input;
+the database stores bcrypt password hashes.
 
-- `fleet.manager@transitops.local`
-- `safety.officer@transitops.local`
-- `finance.analyst@transitops.local`
+| Email | Password | Role |
+| --- | --- | --- |
+| `fleet.manager@transitops.local` | `FleetManager@123` | `Fleet Manager` |
+| `safety.officer@transitops.local` | `SafetyOfficer@123` | `Safety Officer` |
+| `finance.analyst@transitops.local` | `FinanceAnalyst@123` | `Financial Analyst` |
 
 ## Auth API
 
