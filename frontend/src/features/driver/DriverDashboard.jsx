@@ -2,48 +2,56 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useFleetStore from '../../store/useFleetStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { Truck, LogOut, CheckCircle, Settings } from 'lucide-react';
+import { Truck, LogOut, CheckCircle, Settings, Loader } from 'lucide-react';
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
-  const { trips, vehicles, drivers, completeTrip } = useFleetStore();
+  const { trips, vehicles, currentDriver, fetchCurrentDriver, fetchTrips, fetchVehicles, completeTrip, isLoading } = useFleetStore();
   const { user, logout } = useAuthStore();
-  
-  // Find driver profile by matching name or user email (defaulting to d2 Sam Rivera)
-  const isAlex = user?.email?.toLowerCase().includes('driver.alex');
-  const loggedInDriverId = isAlex 
-    ? (drivers.find(d => d.name === 'Alex Morgan')?.id || 'd1')
-    : 'd2'; 
-    
-  const driverProfile = drivers.find(d => d.id === loggedInDriverId);
+
+  const [finalOdometer, setFinalOdometer] = useState('');
+  const [actualDistance, setActualDistance] = useState('');
+  const [error, setError] = useState('');
+
+  // Fetch current driver on mount
+  useEffect(() => {
+    fetchCurrentDriver();
+    fetchVehicles();
+  }, [fetchCurrentDriver, fetchVehicles]);
+
+  // Fetch driver's dispatched trips once currentDriver is loaded
+  useEffect(() => {
+    if (currentDriver) {
+      fetchTrips({ driverId: currentDriver.id, status: 'Dispatched' });
+    }
+  }, [currentDriver, fetchTrips]);
+
+  // Find the driver's active trip from loaded trips
+  const activeTrip = currentDriver ? trips.find(t => t.driverId === currentDriver.id && t.status === 'Dispatched') : null;
+  const vehicle = activeTrip ? vehicles.find(v => v.id === activeTrip.vehicleId) : null;
+
+  // Pre-fill odometer when a trip is detected
+  useEffect(() => {
+    if (vehicle) {
+      setFinalOdometer(vehicle.odometer);
+    }
+  }, [vehicle]);
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
   };
-  
-  // Find the driver's active trip
-  const activeTrip = trips.find(t => t.driverId === loggedInDriverId && t.status === 'Dispatched');
-  const vehicle = activeTrip ? vehicles.find(v => v.id === activeTrip.vehicleId) : null;
 
-  const [finalOdometer, setFinalOdometer] = useState('');
-  const [fuelUsed, setFuelUsed] = useState('');
-  const [error, setError] = useState('');
-
-  // Pre-fill odometer when a trip is detected
-  useEffect(() => {
-    if (vehicle) setFinalOdometer(vehicle.odometer);
-  }, [vehicle]);
-
-  const handleComplete = (e) => {
+  const handleComplete = async (e) => {
     e.preventDefault();
+    if (!activeTrip) return;
     try {
-      completeTrip(activeTrip.id, Number(finalOdometer), Number(fuelUsed));
+      await completeTrip(activeTrip.id, Number(finalOdometer), Number(actualDistance));
       setFinalOdometer('');
-      setFuelUsed('');
+      setActualDistance('');
       setError('');
     } catch (err) {
-      setError(err.message === "INVALID_ODOMETER_VALUE" ? "Final odometer cannot be less than current odometer." : err.message);
+      setError(err.message === "end odometer cannot be less than current odometer" ? "Final odometer cannot be less than current odometer." : err.message);
     }
   };
 
@@ -53,8 +61,11 @@ const DriverDashboard = () => {
         {/* Header */}
         <header className="flex justify-between items-center py-6 mb-4 border-b border-[#222]">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Driver Portal</h1>
-            <p className="text-sm text-gray-500">Welcome, {driverProfile?.name}</p>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              Driver Portal
+              {isLoading && <Loader className="animate-spin text-orange-500" size={16} />}
+            </h1>
+            <p className="text-sm text-gray-500">Welcome, {currentDriver?.name || user?.email}</p>
           </div>
           <div className="flex space-x-2">
             <button onClick={() => navigate('/settings')} className="p-3 bg-[#1a1a1a] rounded-full border border-[#222] text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/20 hover:text-orange-500 transition-all active:scale-95">
@@ -123,8 +134,8 @@ const DriverDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Fuel Consumed (Liters)</label>
-                  <input required type="number" value={fuelUsed} onChange={e => setFuelUsed(e.target.value)} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-green-500 transition-colors" placeholder="e.g. 45" />
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Actual Distance Traveled (km)</label>
+                  <input required type="number" value={actualDistance} onChange={e => setActualDistance(e.target.value)} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-green-500 transition-colors" placeholder="e.g. 155" />
                 </div>
 
                 <div className="pt-2">

@@ -1,36 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useFleetStore from '../../../store/useFleetStore';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Search, Loader } from 'lucide-react';
 
 const VehicleRegistryPage = () => {
-  const { vehicles, addVehicle, retireVehicle } = useFleetStore();
+  const { vehicles, fetchVehicles, addVehicle, retireVehicle, isLoading } = useFleetStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
+
+  // Filters State
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Form State
-  const [formData, setFormData] = useState({ regNumber: '', name: '', type: 'Van', maxCapacity: '', odometer: '', cost: '', region: 'North' });
+  const [formData, setFormData] = useState({ regNumber: '', name: '', type: 'Van', maxCapacity: '', odometer: '', cost: '' });
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    fetchVehicles({
+      type: typeFilter,
+      status: statusFilter,
+      search: searchQuery
+    });
+  }, [typeFilter, statusFilter, searchQuery, fetchVehicles]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      addVehicle({
+      await addVehicle({
         ...formData,
         maxCapacity: Number(formData.maxCapacity),
         odometer: Number(formData.odometer),
         cost: Number(formData.cost)
       });
       setIsAddModalOpen(false);
-      setFormData({ regNumber: '', name: '', type: 'Van', maxCapacity: '', odometer: '', cost: '', region: 'North' });
+      setFormData({ regNumber: '', name: '', type: 'Van', maxCapacity: '', odometer: '', cost: '' });
       setError('');
     } catch (err) {
-      setError(err.message === "DUPLICATE_REGISTRATION_NUMBER" ? "Registration Number must be unique." : err.message);
+      setError(err.message === "registration number must be unique" ? "Registration Number must be unique." : err.message);
     }
   };
 
-  const handleRetire = (id) => {
+  const handleRetire = async (id) => {
     try {
-      retireVehicle(id);
-    } catch(err) {
+      await retireVehicle(id);
+    } catch (err) {
       alert("Cannot retire vehicle: " + err.message);
     }
   }
@@ -47,16 +60,42 @@ const VehicleRegistryPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex space-x-4">
-          <select className="bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-orange-500">
-            <option>Type: All</option>
+      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 items-stretch sm:items-center">
+          <div className="relative flex items-center">
+            <Search size={16} className="absolute left-3 text-gray-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search registration or name..."
+              className="bg-[#1a1a1a] border border-[#333] rounded-lg pl-9 pr-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-orange-500 w-full sm:w-64"
+            />
+          </div>
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+            className="bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-orange-500"
+          >
+            <option value="">Type: All</option>
+            <option value="Van">Van</option>
+            <option value="Heavy Truck">Heavy Truck</option>
+            <option value="Mini">Mini</option>
           </select>
-          <select className="bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-orange-500">
-            <option>Status: All</option>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-orange-500"
+          >
+            <option value="">Status: All</option>
+            <option value="Available">Available</option>
+            <option value="On Trip">On Trip</option>
+            <option value="In Shop">In Shop</option>
+            <option value="Retired">Retired</option>
           </select>
+          {isLoading && <Loader className="animate-spin text-orange-500 ml-2" size={18} />}
         </div>
-        <button 
+        <button
           onClick={() => setIsAddModalOpen(true)}
           className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-[0_0_15px_rgba(234,88,12,0.3)] hover:-translate-y-0.5 active:translate-y-0"
         >
@@ -104,9 +143,6 @@ const VehicleRegistryPage = () => {
             </tbody>
           </table>
         </div>
-        <div className="p-4 bg-[#222] text-xs text-orange-500/80 font-medium tracking-wide">
-          Rule: Registration No. must be unique • Retired & In Shop vehicles are hidden from Trip Dispatcher
-        </div>
       </div>
 
       {/* Add Vehicle Modal */}
@@ -121,16 +157,16 @@ const VehicleRegistryPage = () => {
               {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-lg flex items-center"><span className="font-bold mr-2">Error:</span> {error}</div>}
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Registration Number</label>
-                <input required value={formData.regNumber} onChange={e => setFormData({...formData, regNumber: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" placeholder="e.g. VAN-99" />
+                <input required value={formData.regNumber} onChange={e => setFormData({ ...formData, regNumber: e.target.value })} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" placeholder="e.g. VAN-99" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Model Name</label>
-                  <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" placeholder="e.g. Ford Transit" />
+                  <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" placeholder="e.g. Ford Transit" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Type</label>
-                  <select required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+                  <select required value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
                     <option>Van</option>
                     <option>Heavy Truck</option>
                     <option>Mini</option>
@@ -140,16 +176,16 @@ const VehicleRegistryPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Max Capacity (kg)</label>
-                  <input required type="number" value={formData.maxCapacity} onChange={e => setFormData({...formData, maxCapacity: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                  <input required type="number" value={formData.maxCapacity} onChange={e => setFormData({ ...formData, maxCapacity: e.target.value })} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Acquisition Cost</label>
-                  <input required type="number" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                  <input required type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Current Odometer (km)</label>
-                <input required type="number" value={formData.odometer} onChange={e => setFormData({...formData, odometer: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                <input required type="number" value={formData.odometer} onChange={e => setFormData({ ...formData, odometer: e.target.value })} className="w-full bg-[#121212] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
               </div>
               <div className="pt-2">
                 <button type="submit" className="w-full bg-orange-600 hover:bg-orange-500 text-white px-4 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.4)]">Complete Onboarding</button>

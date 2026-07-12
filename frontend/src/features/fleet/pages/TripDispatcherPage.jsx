@@ -1,36 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useFleetStore from '../../../store/useFleetStore';
+import { Loader, AlertTriangle } from 'lucide-react';
 
 const TripDispatcherPage = () => {
-  const { vehicles, drivers, trips, dispatchTrip } = useFleetStore();
+  const { vehicles, drivers, trips, dispatchTrip, cancelTrip, fetchTrips, fetchVehicles, fetchDrivers, isLoading } = useFleetStore();
   
-  const availableVehicles = vehicles.filter(v => v.status === 'Available');
-  const availableDrivers = drivers.filter(d => d.status === 'Available');
-
   const [formData, setFormData] = useState({
     source: '',
     destination: '',
     vehicleId: '',
     driverId: '',
     cargoWeight: '',
-    plannedDistance: ''
+    plannedDistance: '',
+    revenue: ''
   });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchTrips();
+    fetchVehicles();
+    fetchDrivers();
+  }, [fetchTrips, fetchVehicles, fetchDrivers]);
+
+  const availableVehicles = vehicles.filter(v => v.status === 'Available');
+  const availableDrivers = drivers.filter(d => d.status === 'Available');
 
   const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
   const weightExceeded = selectedVehicle && Number(formData.cargoWeight) > selectedVehicle.maxCapacity;
 
-  const handleDispatch = (e) => {
+  const handleDispatch = async (e) => {
     e.preventDefault();
     if (weightExceeded) return;
-    
-    dispatchTrip({
-      ...formData,
-      cargoWeight: Number(formData.cargoWeight),
-      plannedDistance: Number(formData.plannedDistance)
-    });
-    
-    // Reset form
-    setFormData({ source: '', destination: '', vehicleId: '', driverId: '', cargoWeight: '', plannedDistance: '' });
+    try {
+      await dispatchTrip({
+        ...formData,
+        cargoWeight: Number(formData.cargoWeight),
+        plannedDistance: Number(formData.plannedDistance),
+        revenue: Number(formData.revenue)
+      });
+      // Reset form
+      setFormData({ source: '', destination: '', vehicleId: '', driverId: '', cargoWeight: '', plannedDistance: '', revenue: '' });
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (window.confirm("Are you sure you want to cancel this trip dispatch?")) {
+      try {
+        await cancelTrip(id);
+      } catch (err) {
+        alert("Failed to cancel trip: " + err.message);
+      }
+    }
   };
 
   return (
@@ -42,13 +65,19 @@ const TripDispatcherPage = () => {
           <h3 className="text-sm font-bold text-gray-300 uppercase tracking-widest mb-6 border-b border-[#333] pb-4">Create Trip</h3>
           
           <form onSubmit={handleDispatch} className="space-y-4">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-lg flex items-center">
+                <span className="font-bold mr-2">Error:</span> {error}
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Source</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Source Location</label>
               <input required value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. Depot A" />
             </div>
             
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Destination</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Destination Location</label>
               <input required value={formData.destination} onChange={e => setFormData({...formData, destination: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. Warehouse B" />
             </div>
 
@@ -67,25 +96,30 @@ const TripDispatcherPage = () => {
               <select required value={formData.driverId} onChange={e => setFormData({...formData, driverId: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors">
                 <option value="">Select a Driver...</option>
                 {availableDrivers.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} (Safety: {d.safetyScore}%)</option>
+                  <option key={d.id} value={d.id}>{d.name} (Safety Score: {d.safetyScore}%)</option>
                 ))}
               </select>
             </div>
 
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cargo Weight (kg)</label>
+              <input required type="number" value={formData.cargoWeight} onChange={e => setFormData({...formData, cargoWeight: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cargo Weight (kg)</label>
-                <input required type="number" value={formData.cargoWeight} onChange={e => setFormData({...formData, cargoWeight: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors" />
-              </div>
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Distance (km)</label>
                 <input required type="number" value={formData.plannedDistance} onChange={e => setFormData({...formData, plannedDistance: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Revenue ($)</label>
+                <input required type="number" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value})} className="w-full bg-[#121212] border border-[#333] rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors" />
               </div>
             </div>
 
             {weightExceeded && (
               <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg text-xs font-medium flex items-start animate-in fade-in zoom-in-95">
-                <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                 <span>Cargo weight ({formData.cargoWeight}kg) exceeds vehicle capacity ({selectedVehicle.maxCapacity}kg). Dispatch blocked.</span>
               </div>
             )}
@@ -93,14 +127,14 @@ const TripDispatcherPage = () => {
             <div className="pt-6 border-t border-[#333]">
               <button 
                 type="submit" 
-                disabled={weightExceeded || !formData.vehicleId || !formData.driverId}
+                disabled={weightExceeded || !formData.vehicleId || !formData.driverId || isLoading}
                 className={`w-full py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all ${
-                  weightExceeded || !formData.vehicleId || !formData.driverId
+                  weightExceeded || !formData.vehicleId || !formData.driverId || isLoading
                   ? 'bg-[#333] text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:-translate-y-0.5'
                 }`}
               >
-                Dispatch Trip
+                {isLoading ? 'Dispatching...' : 'Dispatch Trip'}
               </button>
             </div>
           </form>
@@ -111,7 +145,10 @@ const TripDispatcherPage = () => {
       <div className="w-full lg:w-2/3">
         <div className="bg-[#1a1a1a] border border-[#222] rounded-xl overflow-hidden shadow-sm h-full flex flex-col">
           <div className="p-6 border-b border-[#222] flex justify-between items-center bg-gradient-to-r from-[#1a1a1a] to-[#222]">
-            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-widest">Live Dispatch Board</h3>
+            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-widest flex items-center gap-2">
+              Live Dispatch Board
+              {isLoading && <Loader className="animate-spin text-orange-500" size={16} />}
+            </h3>
             <div className="flex space-x-2 text-[10px] font-bold uppercase tracking-widest">
               <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1.5 rounded-md">Dispatched</span>
               <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1.5 rounded-md">Completed</span>
@@ -122,13 +159,18 @@ const TripDispatcherPage = () => {
             {trips.length === 0 ? (
               <div className="text-center text-gray-500 mt-10">No trips dispatched yet.</div>
             ) : (
-              [...trips].reverse().map(trip => {
+              [...trips].map(trip => {
                 const vehicle = vehicles.find(v => v.id === trip.vehicleId);
                 const driver = drivers.find(d => d.id === trip.driverId);
                 const isCompleted = trip.status === 'Completed';
+                const isCancelled = trip.status === 'Cancelled';
 
                 return (
-                  <div key={trip.id} className={`p-6 rounded-2xl border transition-all ${isCompleted ? 'bg-[#121212]/50 border-[#222]' : 'bg-gradient-to-r from-[#1a1a1a] to-[#222] border-[#333] hover:border-[#444] shadow-md hover:-translate-y-0.5'}`}>
+                  <div key={trip.id} className={`p-6 rounded-2xl border transition-all ${
+                    isCompleted ? 'bg-[#121212]/30 border-[#222] opacity-70' :
+                    isCancelled ? 'bg-[#121212]/30 border-[#222] opacity-50 line-through' :
+                    'bg-gradient-to-r from-[#1a1a1a] to-[#222] border-[#333] hover:border-[#444] shadow-md hover:-translate-y-0.5'
+                  }`}>
                     <div className="flex justify-between items-start mb-6">
                       <div>
                         <div className="text-xs font-mono text-gray-500 mb-1.5 tracking-wider">TRIP-{trip.id.substring(trip.id.length - 4)}</div>
@@ -138,9 +180,23 @@ const TripDispatcherPage = () => {
                           {trip.destination}
                         </div>
                       </div>
-                      <span className={`px-4 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-widest ${isCompleted ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]'}`}>
-                        {trip.status}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        {trip.status === 'Dispatched' && (
+                          <button 
+                            onClick={() => handleCancel(trip.id)}
+                            className="bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <span className={`px-4 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-widest ${
+                          isCompleted ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                          isCancelled ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          'bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                        }`}>
+                          {trip.status}
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-5 border-t border-[#222]">
@@ -157,8 +213,8 @@ const TripDispatcherPage = () => {
                         <div className="text-sm text-gray-300 mt-1 font-medium">{trip.cargoWeight} kg</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Est. Dist</div>
-                        <div className="text-sm text-gray-300 mt-1 font-medium">{trip.plannedDistance} km</div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Revenue</div>
+                        <div className="text-sm text-green-400 mt-1 font-mono font-medium">${trip.revenue}</div>
                       </div>
                     </div>
                   </div>

@@ -1,136 +1,419 @@
 import { create } from 'zustand';
+import { api } from '../api';
 
-// --- Mock Data ---
-const initialVehicles = [
-  { id: 'v1', regNumber: 'VAN-05', name: 'Ford Transit', type: 'Van', maxCapacity: 500, odometer: 12500, cost: 35000, region: 'North', status: 'Available' },
-  { id: 'v2', regNumber: 'TRK-10', name: 'Volvo VNL', type: 'Heavy Truck', maxCapacity: 15000, odometer: 85200, cost: 120000, region: 'East', status: 'On Trip' },
-  { id: 'v3', regNumber: 'VAN-08', name: 'Mercedes Sprinter', type: 'Van', maxCapacity: 800, odometer: 4200, cost: 45000, region: 'South', status: 'In Shop' }
-];
+// --- Mappers ---
+const mapVehicleFromBackend = (v) => ({
+  id: v.id,
+  regNumber: v.registration_number,
+  name: v.name,
+  model: v.model || '',
+  type: v.type,
+  maxCapacity: Number(v.max_load_kg),
+  odometer: Number(v.odometer_km),
+  cost: Number(v.acquisition_cost),
+  status: v.status,
+  createdAt: v.created_at,
+  updatedAt: v.updated_at
+});
 
-const initialDrivers = [
-  { id: 'd1', name: 'Alex Morgan', license: 'DL-9923', category: 'Heavy', expiry: '2027-05-12', phone: '+1 555-0192', safetyScore: 98, status: 'Available' },
-  { id: 'd2', name: 'Sam Rivera', license: 'DL-1044', category: 'Light', expiry: '2026-11-30', phone: '+1 555-0833', safetyScore: 92, status: 'On Trip' },
-  { id: 'd3', name: 'Jordan Lee', license: 'DL-0012', category: 'Heavy', expiry: '2025-01-15', phone: '+1 555-0455', safetyScore: 75, status: 'Suspended' }
-];
+const mapDriverFromBackend = (d) => ({
+  id: d.id,
+  userId: d.user_id,
+  name: d.name,
+  license: d.license_number,
+  category: d.license_category,
+  expiry: d.license_expiry_date ? d.license_expiry_date.split('T')[0] : '',
+  phone: d.contact_number,
+  safetyScore: d.safety_score,
+  status: d.status,
+  createdAt: d.created_at,
+  updatedAt: d.updated_at
+});
 
-const initialTrips = [
-  { id: 't1', source: 'Depot A', destination: 'Warehouse B', vehicleId: 'v2', driverId: 'd2', cargoWeight: 12000, plannedDistance: 450, status: 'Dispatched' }
-];
+const mapMaintenanceLogFromBackend = (log) => ({
+  id: log.id,
+  vehicleId: log.vehicle_id,
+  title: log.title,
+  description: log.description || '',
+  estimatedCost: log.status === 'Active' ? Number(log.cost) : 0,
+  actualCost: log.status === 'Closed' ? Number(log.cost) : 0,
+  status: log.status,
+  scheduledDate: log.started_at ? log.started_at.split('T')[0] : '',
+  closedAt: log.closed_at ? log.closed_at.split('T')[0] : ''
+});
+
+const mapTripFromBackend = (t) => ({
+  id: t.id,
+  vehicleId: t.vehicle_id,
+  driverId: t.driver_id,
+  source: t.source,
+  destination: t.destination,
+  cargoWeight: Number(t.cargo_weight_kg),
+  plannedDistance: Number(t.planned_distance_km),
+  actualDistance: t.actual_distance_km ? Number(t.actual_distance_km) : null,
+  revenue: Number(t.revenue),
+  status: t.status,
+  dispatchedAt: t.dispatched_at,
+  completedAt: t.completed_at,
+  cancelledAt: t.cancelled_at,
+  createdAt: t.created_at,
+  updatedAt: t.updated_at
+});
 
 // --- Zustand Store ---
 const useFleetStore = create((set, get) => ({
-  vehicles: initialVehicles,
-  drivers: initialDrivers,
-  trips: initialTrips,
+  vehicles: [],
+  drivers: [],
+  trips: [],
+  currentDriver: null,
   maintenanceLogs: [],
-  expenses: [], // To track maintenance and fuel costs
+  expenses: [],
+  isLoading: false,
+  error: null,
+  pagination: null,
+  kpis: null,
 
   // --- VEHICLE REGISTRY ACTIONS ---
-  
-  // VAL001: Registration number must be unique
-  addVehicle: (vehicle) => {
-    const { vehicles } = get();
-    const isDuplicate = vehicles.some(v => v.regNumber === vehicle.regNumber);
-    if (isDuplicate) throw new Error("DUPLICATE_REGISTRATION_NUMBER");
-    
-    set((state) => ({ 
-      vehicles: [...state.vehicles, { ...vehicle, id: Date.now().toString(), status: 'Available' }] 
-    }));
-  },
 
-  updateVehicle: (id, updates) => {
-    set((state) => ({
-      vehicles: state.vehicles.map(v => v.id === id ? { ...v, ...updates } : v)
-    }));
-  },
+  fetchVehicles: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.type) params.append('type', filters.type);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
 
-  // VAL004: Cannot retire if On Trip or In Shop
-  retireVehicle: (id) => {
-    const vehicle = get().vehicles.find(v => v.id === id);
-    if (vehicle?.status === 'On Trip' || vehicle?.status === 'In Shop') {
-      throw new Error("VEHICLE_HAS_ACTIVE_DEPENDENCIES");
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/api/vehicles${queryString}`);
+      if (res.success) {
+        set({
+          vehicles: res.data.map(mapVehicleFromBackend),
+          pagination: res.meta,
+          isLoading: false
+        });
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
-    set((state) => ({
-      vehicles: state.vehicles.map(v => v.id === id ? { ...v, status: 'Retired' } : v)
-    }));
+  },
+
+  addVehicle: async (vehicle) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/api/vehicles', {
+        registration_number: vehicle.regNumber,
+        name: vehicle.name,
+        model: vehicle.model || '',
+        type: vehicle.type,
+        max_load_kg: Number(vehicle.maxCapacity),
+        odometer_km: Number(vehicle.odometer),
+        acquisition_cost: Number(vehicle.cost)
+      });
+      if (res.success) {
+        await get().fetchVehicles();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  updateVehicle: async (id, updates) => {
+    set({ isLoading: true, error: null });
+    try {
+      const payload = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.model !== undefined) payload.model = updates.model;
+      if (updates.type !== undefined) payload.type = updates.type;
+      if (updates.maxCapacity !== undefined) payload.max_load_kg = Number(updates.maxCapacity);
+      if (updates.odometer !== undefined) payload.odometer_km = Number(updates.odometer);
+      if (updates.cost !== undefined) payload.acquisition_cost = Number(updates.cost);
+
+      const res = await api.put(`/api/vehicles/${id}`, payload);
+      if (res.success) {
+        await get().fetchVehicles();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  retireVehicle: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post(`/api/vehicles/${id}/retire`);
+      if (res.success) {
+        await get().fetchVehicles();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   },
 
   // --- DRIVER ACTIONS ---
 
-  addDriver: (driver) => {
-    set((state) => ({
-      drivers: [...state.drivers, { ...driver, id: Date.now().toString(), status: 'Available' }]
-    }));
+  fetchDrivers: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
+
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/api/drivers${queryString}`);
+      if (res.success) {
+        set({
+          drivers: res.data.map(mapDriverFromBackend),
+          isLoading: false
+        });
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   },
 
-  // VAL005: Cannot suspend or mark off duty if On Trip
-  updateDriverStatus: (id, newStatus) => {
-    const driver = get().drivers.find(d => d.id === id);
-    if (driver?.status === 'On Trip') throw new Error("DRIVER_HAS_ACTIVE_TRIP");
-    
-    set((state) => ({
-      drivers: state.drivers.map(d => d.id === id ? { ...d, status: newStatus } : d)
-    }));
+  addDriver: async (driver) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/api/drivers', {
+        email: driver.email,
+        name: driver.name,
+        license_number: driver.license,
+        license_category: driver.category,
+        license_expiry_date: driver.expiry + 'T00:00:00Z',
+        contact_number: driver.phone
+      });
+      if (res.success) {
+        await get().fetchDrivers();
+        return res.data.temporary_password;
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  updateDriverStatus: async (id, status) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post(`/api/drivers/${id}/status`, { status });
+      if (res.success) {
+        await get().fetchDrivers();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  deleteDriver: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete(`/api/drivers/${id}`);
+      if (res.success) {
+        await get().fetchDrivers();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   },
 
   // --- MAINTENANCE ACTIONS ---
 
-  // VAL002: Vehicle must be Available
-  startMaintenance: (vehicleId, logDetails) => {
-    const vehicle = get().vehicles.find(v => v.id === vehicleId);
-    if (vehicle?.status !== 'Available') throw new Error("VEHICLE_NOT_AVAILABLE_FOR_SHOP");
+  fetchMaintenanceLogs: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.vehicleId) params.append('vehicle_id', filters.vehicleId);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
 
-    set((state) => ({
-      maintenanceLogs: [...state.maintenanceLogs, { ...logDetails, id: Date.now().toString(), vehicleId, status: 'Active' }],
-      vehicles: state.vehicles.map(v => v.id === vehicleId ? { ...v, status: 'In Shop' } : v)
-    }));
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/api/maintenance${queryString}`);
+      if (res.success) {
+        set({
+          maintenanceLogs: res.data.map(mapMaintenanceLogFromBackend),
+          isLoading: false
+        });
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   },
 
-  // VAL003: Restore to Available upon close, add to expenses
-  closeMaintenance: (logId, actualCost, notes) => {
-    const log = get().maintenanceLogs.find(l => l.id === logId);
-    if (!log) return;
+  startMaintenance: async (vehicleId, logDetails) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/api/maintenance', {
+        vehicle_id: vehicleId,
+        title: logDetails.title,
+        description: logDetails.description || '',
+        estimated_cost: Number(logDetails.estimatedCost)
+      });
+      if (res.success) {
+        await get().fetchMaintenanceLogs();
+        await get().fetchVehicles();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
 
-    set((state) => {
-      // Find the vehicle to check if it was manually retired while in shop
-      const vehicle = state.vehicles.find(v => v.id === log.vehicleId);
-      const newVehicleStatus = vehicle?.status === 'Retired' ? 'Retired' : 'Available';
-
-      return {
-        maintenanceLogs: state.maintenanceLogs.map(l => l.id === logId ? { ...l, status: 'Closed', actualCost, notes } : l),
-        vehicles: state.vehicles.map(v => v.id === log.vehicleId ? { ...v, status: newVehicleStatus } : v),
-        expenses: [...state.expenses, { id: Date.now().toString(), type: 'Maintenance', amount: actualCost, vehicleId: log.vehicleId, date: new Date().toISOString() }]
-      };
-    });
+  closeMaintenance: async (logId, actualCost, notes) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post(`/api/maintenance/${logId}/close`, {
+        actual_cost: Number(actualCost),
+        description: notes || ''
+      });
+      if (res.success) {
+        await get().fetchMaintenanceLogs();
+        await get().fetchVehicles();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   },
 
   // --- DISPATCH ACTIONS ---
 
-  dispatchTrip: (tripDetails) => {
-    set((state) => ({
-      trips: [...state.trips, { ...tripDetails, id: Date.now().toString(), status: 'Dispatched' }],
-      vehicles: state.vehicles.map(v => v.id === tripDetails.vehicleId ? { ...v, status: 'On Trip' } : v),
-      drivers: state.drivers.map(d => d.id === tripDetails.driverId ? { ...d, status: 'On Trip' } : d)
-    }));
+  fetchTrips: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.driverId) params.append('driver_id', filters.driverId);
+      if (filters.vehicleId) params.append('vehicle_id', filters.vehicleId);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
+
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/api/trips${queryString}`);
+      if (res.success) {
+        set({
+          trips: res.data.map(mapTripFromBackend),
+          isLoading: false
+        });
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   },
 
-  // VAL006: Odometer logic applied here during trip completion
-  completeTrip: (tripId, finalOdometer, fuelUsed) => {
-    const trip = get().trips.find(t => t.id === tripId);
-    if (!trip) return;
-    
-    const vehicle = get().vehicles.find(v => v.id === trip.vehicleId);
-    if (vehicle && finalOdometer < vehicle.odometer) {
-      throw new Error("INVALID_ODOMETER_VALUE");
+  fetchCurrentDriver: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.get('/api/drivers/me');
+      if (res.success) {
+        const mapped = mapDriverFromBackend(res.data);
+        set({
+          currentDriver: mapped,
+          isLoading: false
+        });
+        return mapped;
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
+  },
 
-    set((state) => ({
-      trips: state.trips.map(t => t.id === tripId ? { ...t, status: 'Completed', finalOdometer, fuelUsed } : t),
-      vehicles: state.vehicles.map(v => v.id === trip.vehicleId ? { ...v, status: 'Available', odometer: finalOdometer } : v),
-      drivers: state.drivers.map(d => d.id === trip.driverId ? { ...d, status: 'Available' } : d),
-      expenses: fuelUsed > 0 ? [...state.expenses, { id: Date.now().toString(), type: 'Fuel', amount: fuelUsed, vehicleId: trip.vehicleId, date: new Date().toISOString() }] : state.expenses
-    }));
+  dispatchTrip: async (tripDetails) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/api/trips', {
+        vehicle_id: tripDetails.vehicleId,
+        driver_id: tripDetails.driverId,
+        source: tripDetails.source,
+        destination: tripDetails.destination,
+        cargo_weight_kg: Number(tripDetails.cargoWeight),
+        planned_distance_km: Number(tripDetails.plannedDistance),
+        revenue: Number(tripDetails.revenue)
+      });
+      if (res.success) {
+        await get().fetchTrips();
+        await get().fetchVehicles();
+        await get().fetchDrivers();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  completeTrip: async (tripId, finalOdometer, actualDistance) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post(`/api/trips/${tripId}/complete`, {
+        actual_distance_km: Number(actualDistance),
+        end_odometer_km: Number(finalOdometer)
+      });
+      if (res.success) {
+        await get().fetchTrips();
+        await get().fetchVehicles();
+        await get().fetchDrivers();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  cancelTrip: async (tripId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post(`/api/trips/${tripId}/cancel`);
+      if (res.success) {
+        await get().fetchTrips();
+        await get().fetchVehicles();
+        await get().fetchDrivers();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  fetchKPIs: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.get('/api/kpis');
+      if (res.success) {
+        const mappedKPIs = {
+          activeVehicles: res.data.active_vehicles,
+          availableVehicles: res.data.available_vehicles,
+          vehiclesInMaintenance: res.data.vehicles_in_maintenance,
+          activeTrips: res.data.active_trips,
+          pendingTrips: res.data.pending_trips,
+          driversOnDuty: res.data.drivers_on_duty,
+          fleetUtilizationPercent: res.data.fleet_utilization_percent,
+          recentTrips: (res.data.recent_trips || []).map(mapTripFromBackend)
+        };
+        set({
+          kpis: mappedKPIs,
+          isLoading: false
+        });
+        return mappedKPIs;
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
   }
-}));
+});
 
 export default useFleetStore;
