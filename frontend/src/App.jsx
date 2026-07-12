@@ -11,6 +11,9 @@ import TripDispatcherPage from './features/fleet/pages/TripDispatcherPage';
 import MaintenancePage from './features/fleet/pages/MaintenancePage';
 import DriverDashboard from './features/driver/DriverDashboard';
 import SettingsPage from './features/auth/SettingsPage';
+import FuelExpensePage from './financial-analyst/pages/FuelExpensePage';
+import AnalyticsPage from './financial-analyst/pages/AnalyticsPage';
+
 
 // Decision router to display either the driver portal or the fleet manager dashboard
 const DashboardRouter = () => {
@@ -96,13 +99,13 @@ function App() {
 
           <Route path="/expenses" element={
             <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst']}>
-              <div className="text-white"><h2 className="text-2xl font-bold">Fuel & Expenses</h2></div>
+              <FuelExpensePage />
             </ProtectedRoute>
           } />
 
           <Route path="/analytics" element={
             <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst', 'Safety Officer']}>
-              <div className="text-white"><h2 className="text-2xl font-bold">Analytics</h2></div>
+              <AnalyticsPage />
             </ProtectedRoute>
           } />
 
