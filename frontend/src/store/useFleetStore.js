@@ -65,6 +65,7 @@ const useFleetStore = create((set, get) => ({
   vehicles: [],
   drivers: [],
   trips: [],
+  driverTrips: [],
   currentDriver: null,
   maintenanceLogs: [],
   expenses: [],
@@ -408,6 +409,28 @@ const useFleetStore = create((set, get) => ({
           isLoading: false
         });
         return mappedKPIs;
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  fetchDriverTrips: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
+
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/api/drivers/me/trips${queryString}`);
+      if (res.success) {
+        set({
+          driverTrips: res.data.map(mapTripFromBackend),
+          isLoading: false
+        });
       }
     } catch (err) {
       set({ error: err.message, isLoading: false });

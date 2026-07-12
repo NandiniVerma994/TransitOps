@@ -52,6 +52,7 @@ func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.Handle("POST /api/drivers", h.authProvider.RequireRole(http.HandlerFunc(h.onboardDriver), "Fleet Manager"))
 	mux.Handle("GET /api/drivers", h.authProvider.RequireAuth(http.HandlerFunc(h.listDrivers)))
 	mux.Handle("GET /api/drivers/me", h.authProvider.RequireRole(http.HandlerFunc(h.getMe), "Driver"))
+	mux.Handle("GET /api/drivers/me/trips", h.authProvider.RequireRole(http.HandlerFunc(h.getMeTrips), "Driver"))
 	mux.Handle("GET /api/drivers/{id}", h.authProvider.RequireAuth(http.HandlerFunc(h.getDriver)))
 	mux.Handle("PUT /api/drivers/{id}", h.authProvider.RequireRole(http.HandlerFunc(h.updateDriver), "Fleet Manager"))
 	mux.Handle("DELETE /api/drivers/{id}", h.authProvider.RequireRole(http.HandlerFunc(h.deleteDriver), "Fleet Manager"))
@@ -439,4 +440,30 @@ func (h *Handler) getKPIStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.writeJSON(w, http.StatusOK, true, "", stats, nil)
+}
+
+func (h *Handler) getMeTrips(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := auth.CurrentUserFromContext(r.Context())
+	if !ok {
+		h.writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	driver, err := h.service.GetDriverByUserID(r.Context(), currentUser.ID)
+	if err != nil {
+		h.handleError(w, r, err)
+		return
+	}
+
+	status := r.URL.Query().Get("status")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	paginated, err := h.service.ListTrips(r.Context(), status, driver.ID, "", page, limit)
+	if err != nil {
+		h.handleError(w, r, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, true, "", paginated.Data, paginated.Meta)
 }
