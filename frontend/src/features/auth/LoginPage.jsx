@@ -10,10 +10,11 @@ const LoginPage = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    console.log('Logging in with', { email, password, role });
-    // TODO: Implement actual authentication
-    // For now, redirect to dashboard
-    navigate('/dashboard');
+    if (role === 'Driver') {
+      navigate('/driver-dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const roles = [

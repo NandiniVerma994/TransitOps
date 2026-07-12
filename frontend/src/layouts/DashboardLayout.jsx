@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Truck, Users, Map, Wrench, Fuel, BarChart3, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Truck, Users, Map, Wrench, LogOut } from 'lucide-react';
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -11,9 +11,6 @@ const DashboardLayout = () => {
     { name: 'Drivers', path: '/drivers', icon: Users },
     { name: 'Trips', path: '/trips', icon: Map },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
-    { name: 'Fuel & Expenses', path: '/expenses', icon: Fuel },
-    { name: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   return (
