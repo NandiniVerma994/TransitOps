@@ -44,7 +44,7 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
-	authHandler.RegisterRoutes(mux)
+	authHandler.MountRoutes(mux)
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("transitops api listening on %s", addr)

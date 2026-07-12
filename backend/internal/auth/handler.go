@@ -16,24 +16,27 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /api/auth/register", h.register)
+func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/login", h.login)
 	mux.Handle("GET /api/auth/me", h.service.RequireAuth(http.HandlerFunc(h.me)))
+	mux.Handle("POST /api/auth/users", h.service.RequireRole(
+		http.HandlerFunc(h.createUser),
+		"Fleet Manager",
+	))
 	mux.Handle("GET /api/auth/fleet-manager-check", h.service.RequireRole(
 		http.HandlerFunc(h.rbacCheck),
 		"Fleet Manager",
 	))
 }
 
-func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	var request RegisterRequest
+func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
+	var request CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
-	response, err := h.service.Register(r.Context(), request)
+	response, err := h.service.CreateUser(r.Context(), request)
 	if err != nil {
 		writeAuthError(w, err)
 		return
@@ -79,7 +82,7 @@ func writeAuthError(w http.ResponseWriter, err error) {
 	case errors.Is(err, ErrValidation):
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, ErrEmailTaken):
-		httpx.WriteError(w, http.StatusConflict, "email already registered")
+		httpx.WriteError(w, http.StatusConflict, "email already exists")
 	case errors.Is(err, ErrInvalidCredentials):
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid email or password")
 	default:

@@ -25,13 +25,13 @@ func NewService(repository *Repository, jwtSecret string, tokenTTL time.Duration
 	}
 }
 
-func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthResponse, error) {
+func (s *Service) CreateUser(ctx context.Context, request CreateUserRequest) (AuthUser, error) {
 	email, err := normalizeEmail(request.Email)
 	if err != nil {
-		return AuthResponse{}, err
+		return AuthUser{}, err
 	}
 	if len(request.Password) < 8 {
-		return AuthResponse{}, fmt.Errorf("%w: password must be at least 8 characters", ErrValidation)
+		return AuthUser{}, fmt.Errorf("%w: password must be at least 8 characters", ErrValidation)
 	}
 	roleName := strings.TrimSpace(request.Role)
 	if roleName == "" {
@@ -40,23 +40,23 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthRe
 
 	_, err = s.repository.FindUserByEmail(ctx, email)
 	if err == nil {
-		return AuthResponse{}, ErrEmailTaken
+		return AuthUser{}, ErrEmailTaken
 	}
 	if err != nil && !errors.Is(err, errNotFound) {
-		return AuthResponse{}, err
+		return AuthUser{}, err
 	}
 
 	role, err := s.repository.FindRoleByName(ctx, roleName)
 	if errors.Is(err, errNotFound) {
-		return AuthResponse{}, fmt.Errorf("%w: invalid role", ErrValidation)
+		return AuthUser{}, fmt.Errorf("%w: invalid role", ErrValidation)
 	}
 	if err != nil {
-		return AuthResponse{}, fmt.Errorf("find role: %w", err)
+		return AuthUser{}, fmt.Errorf("find role: %w", err)
 	}
 
 	passwordHash, err := hashPassword(request.Password)
 	if err != nil {
-		return AuthResponse{}, err
+		return AuthUser{}, err
 	}
 
 	user, err := s.repository.CreateUser(ctx, createUserParams{
@@ -66,10 +66,10 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthRe
 		RoleName:     role.Name,
 	})
 	if err != nil {
-		return AuthResponse{}, err
+		return AuthUser{}, err
 	}
 
-	return s.authResponse(user)
+	return toAuthUser(user), nil
 }
 
 func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResponse, error) {

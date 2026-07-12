@@ -2,7 +2,7 @@ package auth
 
 import "time"
 
-type RegisterRequest struct {
+type CreateUserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"`

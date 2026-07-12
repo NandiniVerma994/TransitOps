@@ -31,3 +31,9 @@ Health check:
 ```sh
 curl http://localhost:8080/health
 ```
+
+Create a company-provided user account:
+
+```sh
+go run ./cmd/create-user -email manager@example.com -password password123 -role "Fleet Manager"
+```
