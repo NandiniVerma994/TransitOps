@@ -7,8 +7,11 @@ import (
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
+	Port            string
+	DatabaseURL     string
+	JWTSecret       string
+	TokenTTLHours   string
+	DefaultUserRole string
 }
 
 func Load() Config {
@@ -16,8 +19,11 @@ func Load() Config {
 	loadDotEnv("backend/.env")
 
 	return Config{
-		Port:        getEnv("APP_PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://transitops:transitops@localhost:5432/transitops?sslmode=disable"),
+		Port:            getEnv("APP_PORT", "8080"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgres://transitops:transitops@localhost:5432/transitops?sslmode=disable"),
+		JWTSecret:       getEnv("JWT_SECRET", "change-this-dev-secret"),
+		TokenTTLHours:   getEnv("TOKEN_TTL_HOURS", "24"),
+		DefaultUserRole: getEnv("DEFAULT_USER_ROLE", "Fleet Manager"),
 	}
 }
 
