@@ -20,6 +20,11 @@ type AuthUser struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Role struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type AuthResponse struct {
 	Token     string    `json:"token"`
 	TokenType string    `json:"token_type"`
@@ -44,6 +49,13 @@ type CurrentUser struct {
 type roleRecord struct {
 	ID   string
 	Name string
+}
+
+func toRole(role roleRecord) Role {
+	return Role{
+		ID:   role.ID,
+		Name: role.Name,
+	}
 }
 
 func toAuthUser(user userRecord) AuthUser {

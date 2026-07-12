@@ -93,6 +93,20 @@ func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResponse
 	return s.authResponse(user)
 }
 
+func (s *Service) ListRoles(ctx context.Context) ([]Role, error) {
+	roleRecords, err := s.repository.ListRoles(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := make([]Role, 0, len(roleRecords))
+	for _, role := range roleRecords {
+		roles = append(roles, toRole(role))
+	}
+
+	return roles, nil
+}
+
 func (s *Service) authResponse(user userRecord) (AuthResponse, error) {
 	token, expiresAt, err := createToken(s.jwtSecret, s.tokenTTL, user)
 	if err != nil {

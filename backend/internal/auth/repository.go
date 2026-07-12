@@ -62,6 +62,33 @@ func (r *Repository) FindRoleByName(ctx context.Context, name string) (roleRecor
 	return role, nil
 }
 
+func (r *Repository) ListRoles(ctx context.Context) ([]roleRecord, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, name
+		FROM roles
+		ORDER BY name;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	roles := make([]roleRecord, 0)
+	for rows.Next() {
+		var role roleRecord
+		if err := rows.Scan(&role.ID, &role.Name); err != nil {
+			return nil, err
+		}
+
+		roles = append(roles, role)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return roles, nil
+}
+
 func (r *Repository) CreateUser(ctx context.Context, params createUserParams) (userRecord, error) {
 	var user userRecord
 	err := r.db.QueryRowContext(ctx, `

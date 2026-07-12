@@ -23,8 +23,8 @@ func (h *Handler) MountRoutes(mux *http.ServeMux) {
 		http.HandlerFunc(h.createUser),
 		"Fleet Manager",
 	))
-	mux.Handle("GET /api/auth/fleet-manager-check", h.service.RequireRole(
-		http.HandlerFunc(h.rbacCheck),
+	mux.Handle("GET /api/auth/roles", h.service.RequireRole(
+		http.HandlerFunc(h.listRoles),
 		"Fleet Manager",
 	))
 }
@@ -71,10 +71,14 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, user)
 }
 
-func (h *Handler) rbacCheck(w http.ResponseWriter, r *http.Request) {
-	httpx.WriteJSON(w, http.StatusOK, map[string]string{
-		"status": "allowed",
-	})
+func (h *Handler) listRoles(w http.ResponseWriter, r *http.Request) {
+	roles, err := h.service.ListRoles(r.Context())
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, roles)
 }
 
 func writeAuthError(w http.ResponseWriter, err error) {
