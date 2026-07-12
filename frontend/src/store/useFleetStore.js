@@ -414,6 +414,6 @@ const useFleetStore = create((set, get) => ({
       throw err;
     }
   }
-});
+}));
 
 export default useFleetStore;
