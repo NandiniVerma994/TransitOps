@@ -291,6 +291,43 @@ const useFleetStore = create((set, get) => ({
 
   // --- DISPATCH ACTIONS ---
 
+  dispatchTrip: (tripDetails) => {
+    set((state) => ({
+      trips: [...state.trips, { ...tripDetails, id: Date.now().toString(), status: 'Dispatched' }],
+      vehicles: state.vehicles.map(v => v.id === tripDetails.vehicleId ? { ...v, status: 'On Trip' } : v),
+      drivers: state.drivers.map(d => d.id === tripDetails.driverId ? { ...d, status: 'On Trip' } : d)
+    }));
+  },
+
+  // VAL006: Odometer logic applied here during trip completion
+  completeTrip: (tripId, finalOdometer, fuelUsed) => {
+    const trip = get().trips.find(t => t.id === tripId);
+    if (!trip) return;
+    
+    const vehicle = get().vehicles.find(v => v.id === trip.vehicleId);
+    if (vehicle && finalOdometer < vehicle.odometer) {
+      throw new Error("INVALID_ODOMETER_VALUE");
+    }
+
+    set((state) => ({
+      trips: state.trips.map(t => t.id === tripId ? { ...t, status: 'Completed', finalOdometer, fuelUsed } : t),
+      vehicles: state.vehicles.map(v => v.id === trip.vehicleId ? { ...v, status: 'Available', odometer: finalOdometer } : v),
+      drivers: state.drivers.map(d => d.id === trip.driverId ? { ...d, status: 'Available' } : d),
+      expenses: fuelUsed > 0 ? [...state.expenses, { id: Date.now().toString(), type: 'Fuel', amount: fuelUsed, vehicleId: trip.vehicleId, date: new Date().toISOString() }] : state.expenses
+    }));
+  },
+
+  // --- SAFETY ACTIONS ---
+  triggerEmailReminder: (driverId) => {
+    // Mock action to simulate an email sent
+    const driver = get().drivers.find(d => d.id === driverId);
+    return `Reminder email successfully sent to ${driver?.name || 'Driver'}.`;
+  },
+  
+  updateDriverScore: (id, newScore) => {
+    set((state) => ({
+      drivers: state.drivers.map(d => d.id === id ? { ...d, safetyScore: Number(newScore) } : d)
+    }));
   fetchTrips: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
