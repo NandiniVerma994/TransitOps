@@ -159,11 +159,7 @@ func (r *Repository) CreateFuelLog(ctx context.Context, req LogFuelRequest, user
 func (r *Repository) PreviousOdometer(ctx context.Context, vehicleID string) (float64, error) {
 	var odometer float64
 	err := r.db.QueryRowContext(ctx, `
-		SELECT COALESCE(
-			(SELECT odometer_km FROM fuel_logs WHERE vehicle_id = $1 AND odometer_km IS NOT NULL ORDER BY logged_at DESC, created_at DESC LIMIT 1),
-			(SELECT odometer_km FROM vehicles WHERE id = $1),
-			0
-		);
+		SELECT odometer_km FROM vehicles WHERE id = $1;
 	`, vehicleID).Scan(&odometer)
 	return odometer, err
 }
