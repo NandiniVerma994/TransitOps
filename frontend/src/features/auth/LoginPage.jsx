@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Truck, Map, ShieldCheck, LineChart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -67,31 +67,31 @@ const LoginPage = () => {
               <div key={i} className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-[2px] shadow-sm"></div>
             ))}
           </div>
-          
+
           <h1 className="text-5xl font-bold tracking-tight mb-4 text-slate-800 drop-shadow-sm">TransitOps</h1>
           <p className="text-slate-600 text-lg mb-12 tracking-wide font-medium">Smart Transport Operations Platform</p>
-          
+
           {/* 2x2 Icon Grid for Roles */}
           <div className="grid grid-cols-2 gap-4">
             {roles.map((role, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="group relative bg-white/40 backdrop-blur-md p-6 rounded-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-default"
               >
                 {/* Subtle gradient hover effect inside the card */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
+
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${role.bg} ${role.color} transform group-hover:scale-110 transition-transform duration-300`}>
                   <role.icon size={24} strokeWidth={2} />
                 </div>
-                
+
                 <h3 className="text-sm font-bold text-slate-800 mb-1 relative z-10">{role.name}</h3>
                 <p className="text-[11px] text-slate-500 leading-relaxed relative z-10">{role.desc}</p>
               </div>
             ))}
           </div>
         </div>
-        
+
         <div className="relative z-10 text-xs text-slate-500 font-bold tracking-[0.2em] uppercase">
           TransitOps © 2026
         </div>
@@ -118,14 +118,14 @@ const LoginPage = () => {
             <h2 className="text-3xl font-semibold text-white tracking-tight mb-2">Welcome back</h2>
             <p className="text-gray-400 text-sm">Sign in to your account to continue</p>
           </div>
-          
+
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
               <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Email</label>
               <div className="relative group">
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl px-5 py-4 text-sm text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all hover:border-[#444]"
@@ -133,27 +133,27 @@ const LoginPage = () => {
                 />
               </div>
             </div>
-            
+
             {/* Password Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Password</label>
                 <a href="#" className="text-xs text-orange-500 hover:text-orange-400 font-medium transition-colors">Forgot password?</a>
               </div>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl px-5 py-4 text-sm text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all hover:border-[#444] tracking-widest"
                 required
               />
             </div>
-            
+
             {/* Role Dropdown */}
             <div className="space-y-2">
               <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Sign in as</label>
               <div className="relative group">
-                <select 
+                <select
                   value={role}
                   onChange={(e) => handleRoleChange(e.target.value)}
                   className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl px-5 py-4 text-sm text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all appearance-none cursor-pointer hover:border-[#444]"
@@ -168,7 +168,7 @@ const LoginPage = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Remember me */}
             <div className="pt-1 pb-4">
               <label className="flex items-center space-x-3 cursor-pointer group w-max">
@@ -188,10 +188,10 @@ const LoginPage = () => {
                 <span>{localError || authError}</span>
               </div>
             )}
-            
+
             {/* Submit Button */}
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={authLoading}
               className="w-full relative group overflow-hidden bg-orange-600 text-white font-semibold text-sm py-4 rounded-xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,88,12,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
