@@ -33,6 +33,7 @@ CREATE TABLE vehicles (
 
 CREATE TABLE drivers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE REFERENCES users(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     license_number TEXT NOT NULL UNIQUE,
     license_category TEXT NOT NULL,
@@ -80,6 +81,7 @@ CREATE TABLE fuel_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vehicle_id UUID NOT NULL REFERENCES vehicles(id),
     trip_id UUID REFERENCES trips(id),
+    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     liters NUMERIC(10, 2) NOT NULL CHECK (liters > 0),
     cost NUMERIC(12, 2) NOT NULL CHECK (cost >= 0),
     logged_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -90,7 +92,8 @@ CREATE TABLE expenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vehicle_id UUID REFERENCES vehicles(id),
     trip_id UUID REFERENCES trips(id),
-    type TEXT NOT NULL CHECK (type IN ('Fuel', 'Maintenance', 'Toll', 'Permit', 'Fine', 'Other')),
+    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    type TEXT NOT NULL CHECK (type IN ('Fuel', 'Maintenance', 'Toll', 'Other')),
     amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
     note TEXT,
     incurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
