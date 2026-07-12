@@ -13,12 +13,16 @@ import DriverDashboard from './features/driver/DriverDashboard';
 import SettingsPage from './features/auth/SettingsPage';
 import SafetyDashboardPage from './features/safety/SafetyDashboardPage';
 import ComplianceDirectoryPage from './features/safety/ComplianceDirectoryPage';
+import FuelExpensePage from './financial-analyst/pages/FuelExpensePage';
+import AnalyticsPage from './financial-analyst/pages/AnalyticsPage';
 
-// Decision router to display either the driver portal or the fleet manager dashboard
+
+// Decision router to display the customized dashboard per role
 const DashboardRouter = () => {
   const { user } = useAuthStore();
-  
-  if (user?.role?.toLowerCase() === 'driver') {
+  const role = user?.role?.toLowerCase();
+
+  if (role === 'driver') {
     return <DriverDashboard />;
   }
   
@@ -26,6 +30,10 @@ const DashboardRouter = () => {
     return <SafetyDashboardPage />;
   }
   
+  if (role === 'financial analyst') {
+    return <AnalyticsPage />;
+  }
+
   return <FleetDashboardPage />;
 };
 
@@ -43,11 +51,11 @@ const DriverRouter = () => {
 // Layout decider: managers get the Sidebar layout; drivers get the full-screen view
 const MainLayoutRouter = () => {
   const { user } = useAuthStore();
-  
+
   if (user?.role?.toLowerCase() === 'driver') {
     return <Outlet />;
   }
-  
+
   return <DashboardLayout />;
 };
 
@@ -76,9 +84,9 @@ function App() {
       <Routes>
         {/* Auth Route */}
         <Route path="/" element={<LoginPage />} />
-        
+
         {/* Protected Dashboard Routes */}
-        <Route 
+        <Route
           element={
             <ProtectedRoute>
               <MainLayoutRouter />
@@ -86,43 +94,43 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardRouter />} />
-          
+
           <Route path="/fleet" element={
             <ProtectedRoute allowedRoles={['Fleet Manager']}>
               <VehicleRegistryPage />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/drivers" element={
             <ProtectedRoute allowedRoles={['Fleet Manager', 'Safety Officer']}>
               <DriverRouter />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/trips" element={
             <ProtectedRoute allowedRoles={['Fleet Manager', 'Driver']}>
               <TripDispatcherPage />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/maintenance" element={
             <ProtectedRoute allowedRoles={['Fleet Manager']}>
               <MaintenancePage />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/expenses" element={
-            <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst']}>
-              <div className="text-white"><h2 className="text-2xl font-bold">Fuel & Expenses</h2></div>
+            <ProtectedRoute allowedRoles={['Financial Analyst']}>
+              <FuelExpensePage />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/analytics" element={
-            <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst', 'Safety Officer']}>
-              <div className="text-white"><h2 className="text-2xl font-bold">Analytics</h2></div>
+            <ProtectedRoute allowedRoles={['Financial Analyst']}>
+              <AnalyticsPage />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

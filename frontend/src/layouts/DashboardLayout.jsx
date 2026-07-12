@@ -18,13 +18,15 @@ const DashboardLayout = () => {
     { name: 'Drivers', path: '/drivers', icon: Users },
     { name: 'Trips', path: '/trips', icon: Map },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
+    { name: 'Fuel & Expenses', path: '/expenses', icon: Fuel },
+    { name: 'Analytics', path: '/analytics', icon: BarChart3 },
   ];
 
   // RBAC permissions mapping: defining allowed items per role
   const rolePermissions = {
-    'fleet manager': ['Dashboard', 'Fleet', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expenses', 'Analytics', 'Settings'],
+    'fleet manager': ['Dashboard', 'Fleet', 'Drivers', 'Trips', 'Maintenance', 'Settings'],
     'driver': ['Dashboard', 'Trips', 'Settings'],
-    'safety officer': ['Dashboard', 'Drivers', 'Analytics', 'Settings'],
+    'safety officer': ['Dashboard', 'Drivers', 'Settings'],
     'financial analyst': ['Dashboard', 'Fuel & Expenses', 'Analytics', 'Settings'],
   };
 

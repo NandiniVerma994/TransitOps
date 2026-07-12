@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import useFleetStore from '../../store/useFleetStore';
 import { LockKeyhole, KeyRound, ShieldAlert, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsPage = () => {
   const { changePassword, error: authError, clearError, isLoading } = useAuthStore();
+  const { currentDriver, fetchCurrentDriver } = useFleetStore();
+  const { user } = useAuthStore();
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [validationError, setValidationError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role?.toLowerCase() === 'driver' && !currentDriver) {
+      fetchCurrentDriver();
+    }
+  }, [user, currentDriver, fetchCurrentDriver]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +62,34 @@ const SettingsPage = () => {
         <h2 className="text-2xl font-bold mb-1 tracking-tight text-white">Settings</h2>
         <p className="text-gray-400 text-sm">Manage your profile, credentials, and platform configurations.</p>
       </div>
+
+      {user?.role?.toLowerCase() === 'driver' && currentDriver && (
+        <div className="bg-[#1a1a1a] border border-[#222] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.2)] p-6 space-y-4">
+          <h3 className="text-sm font-bold text-gray-200 uppercase tracking-wider border-b border-[#222] pb-3">Driver Profile Details</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Full Name</span>
+              <span className="text-white font-medium">{currentDriver.name}</span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">License Category</span>
+              <span className="text-white font-medium">{currentDriver.category}</span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">License Expiry</span>
+              <span className="text-white font-medium font-mono">{currentDriver.expiry}</span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Safety Score</span>
+              <span className="text-orange-500 font-bold font-mono">{currentDriver.safetyScore}%</span>
+            </div>
+            <div className="col-span-2">
+              <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider mb-1">Contact Number</span>
+              <span className="text-white font-medium">{currentDriver.phone}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-[#1a1a1a] border border-[#222] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
         <div className="p-6 border-b border-[#222] flex items-center space-x-3">
