@@ -11,6 +11,7 @@ import (
 	"github.com/NandiniVerma994/TransitOps/backend/internal/auth"
 	"github.com/NandiniVerma994/TransitOps/backend/internal/config"
 	"github.com/NandiniVerma994/TransitOps/backend/internal/db"
+	"github.com/NandiniVerma994/TransitOps/backend/internal/financial"
 	"github.com/NandiniVerma994/TransitOps/backend/internal/fleet"
 )
 
@@ -49,6 +50,10 @@ func main() {
 	fleetService := fleet.NewService(fleetRepository, txManager)
 	fleetHandler := fleet.NewHandler(fleetService, authService)
 
+	financialRepository := financial.NewRepository(database)
+	financialService := financial.NewService(financialRepository)
+	financialHandler := financial.NewHandler(financialService, authService)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -56,6 +61,7 @@ func main() {
 	})
 	authHandler.MountRoutes(mux)
 	fleetHandler.MountRoutes(mux)
+	financialHandler.MountRoutes(mux)
 
 	handler := corsMiddleware(mux)
 

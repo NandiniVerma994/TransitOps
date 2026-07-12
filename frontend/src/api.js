@@ -76,7 +76,7 @@ async function parseResponse(response) {
   }
 
   if (!response.ok) {
-    const errorMsg = (data && data.error) || response.statusText || 'Request failed';
+    const errorMsg = (data && (data.error || data.errors?.join(', '))) || response.statusText || 'Request failed';
     const error = new Error(errorMsg);
     error.status = response.status;
     error.data = data;
