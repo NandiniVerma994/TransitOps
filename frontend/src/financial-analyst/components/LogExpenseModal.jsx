@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import Modal from "./common/Modal";
-import { logExpense, VEHICLE_OPTIONS, TRIP_OPTIONS } from "../services/financialService";
+import { getTripOptions, getVehicleOptions, logExpense } from "../services/financialService";
 
 const EXPENSE_TYPES = ["Toll", "Permit", "Fine", "Other"];
 
@@ -18,6 +18,8 @@ const errorClass = "mt-1 text-xs text-rose-400";
 export default function LogExpenseModal({ open, onClose, onLogged }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [vehicleOptions, setVehicleOptions] = useState([]);
+  const [tripOptions, setTripOptions] = useState([]);
 
   const {
     register,
@@ -27,6 +29,25 @@ export default function LogExpenseModal({ open, onClose, onLogged }) {
   } = useForm({
     defaultValues: { vehicleId: "", tripId: "", type: "Toll", amount: "", note: "" },
   });
+
+  useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+    Promise.all([getVehicleOptions(), getTripOptions()])
+      .then(([vehicles, trips]) => {
+        if (!active) return;
+        setVehicleOptions(vehicles || []);
+        setTripOptions(trips || []);
+      })
+      .catch(() => {
+        if (active) setSubmitError("Couldn't load vehicle options. Please try again.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   const close = () => {
     reset();
@@ -56,7 +77,7 @@ export default function LogExpenseModal({ open, onClose, onLogged }) {
           <label className={labelClass}>Vehicle</label>
           <select className={inputClass} {...register("vehicleId", { required: "Select a vehicle" })}>
             <option value="">Select vehicle</option>
-            {VEHICLE_OPTIONS.map((v) => (
+            {vehicleOptions.map((v) => (
               <option key={v.value} value={v.value}>
                 {v.label}
               </option>
@@ -70,9 +91,9 @@ export default function LogExpenseModal({ open, onClose, onLogged }) {
             <label className={labelClass}>Trip (optional)</label>
             <select className={inputClass} {...register("tripId")}>
               <option value="">None</option>
-              {TRIP_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {tripOptions.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
                 </option>
               ))}
             </select>

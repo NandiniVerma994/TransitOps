@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import Modal from "./common/Modal";
-import { logFuelPurchase, VEHICLE_OPTIONS } from "../services/financialService";
+import { getTripOptions, getVehicleOptions, logFuelPurchase } from "../services/financialService";
 
 const inputClass =
   "w-full rounded-xl border border-slate-700/60 bg-[#1a1a1a] px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-colors";
@@ -16,6 +16,8 @@ const errorClass = "mt-1 text-xs text-rose-400";
 export default function LogFuelModal({ open, onClose, onLogged }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [vehicleOptions, setVehicleOptions] = useState([]);
+  const [tripOptions, setTripOptions] = useState([]);
 
   const {
     register,
@@ -32,6 +34,25 @@ export default function LogFuelModal({ open, onClose, onLogged }) {
       tripId: "",
     },
   });
+
+  useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+    Promise.all([getVehicleOptions(), getTripOptions()])
+      .then(([vehicles, trips]) => {
+        if (!active) return;
+        setVehicleOptions(vehicles || []);
+        setTripOptions(trips || []);
+      })
+      .catch(() => {
+        if (active) setSubmitError("Couldn't load vehicle options. Please try again.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   const close = () => {
     reset();
@@ -61,7 +82,7 @@ export default function LogFuelModal({ open, onClose, onLogged }) {
           <label className={labelClass}>Vehicle</label>
           <select className={inputClass} {...register("vehicleId", { required: "Select a vehicle" })}>
             <option value="">Select vehicle</option>
-            {VEHICLE_OPTIONS.map((v) => (
+            {vehicleOptions.map((v) => (
               <option key={v.value} value={v.value}>
                 {v.label}
               </option>
@@ -118,7 +139,14 @@ export default function LogFuelModal({ open, onClose, onLogged }) {
 
         <div>
           <label className={labelClass}>Trip ID (optional)</label>
-          <input type="text" placeholder="e.g. TR012" className={inputClass} {...register("tripId")} />
+          <select className={inputClass} {...register("tripId")}>
+            <option value="">None</option>
+            {tripOptions.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {submitError && <p className={errorClass}>{submitError}</p>}
