@@ -56,7 +56,8 @@ func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /api/drivers/{id}", h.authProvider.RequireAuth(http.HandlerFunc(h.getDriver)))
 	mux.Handle("PUT /api/drivers/{id}", h.authProvider.RequireRole(http.HandlerFunc(h.updateDriver), "Fleet Manager"))
 	mux.Handle("DELETE /api/drivers/{id}", h.authProvider.RequireRole(http.HandlerFunc(h.deleteDriver), "Fleet Manager"))
-	mux.Handle("POST /api/drivers/{id}/status", h.authProvider.RequireRole(http.HandlerFunc(h.updateDriverStatus), "Fleet Manager"))
+	mux.Handle("POST /api/drivers/{id}/status", h.authProvider.RequireRole(http.HandlerFunc(h.updateDriverStatus), "Fleet Manager", "Safety Officer"))
+	mux.Handle("POST /api/drivers/{id}/safety-score", h.authProvider.RequireRole(http.HandlerFunc(h.updateDriverSafetyScore), "Fleet Manager", "Safety Officer"))
 
 	// Trips
 	mux.Handle("POST /api/trips", h.authProvider.RequireRole(http.HandlerFunc(h.dispatchTrip), "Fleet Manager"))
@@ -466,4 +467,22 @@ func (h *Handler) getMeTrips(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writeJSON(w, http.StatusOK, true, "", paginated.Data, paginated.Meta)
+}
+
+func (h *Handler) updateDriverSafetyScore(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	var req UpdateDriverSafetyScoreRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := h.service.UpdateDriverSafetyScore(r.Context(), id, req.SafetyScore)
+	if err != nil {
+		h.handleError(w, r, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, true, "Driver safety score updated successfully", nil, nil)
 }

@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import useFleetStore from '../../store/useFleetStore';
-import { ShieldAlert, Users, AlertTriangle, AlertOctagon, Mail } from 'lucide-react';
+import { ShieldAlert, Users, AlertTriangle, AlertOctagon, Mail, Loader } from 'lucide-react';
 
 const SafetyDashboardPage = () => {
-  const { drivers } = useFleetStore();
+  const { drivers, fetchDrivers, isLoading } = useFleetStore();
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
 
   const getDaysToExpiry = (expiryDate) => {
     const today = new Date();
@@ -24,6 +28,15 @@ const SafetyDashboardPage = () => {
     if (score >= 80) return 'text-yellow-500';
     return 'text-red-500';
   };
+
+  if (isLoading && drivers.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <Loader className="animate-spin text-orange-500" size={32} />
+        <span className="text-sm text-gray-400">Loading Compliance Data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

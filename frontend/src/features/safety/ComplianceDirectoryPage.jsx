@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useFleetStore from '../../store/useFleetStore';
-import { Mail, CheckCircle, Edit2, X } from 'lucide-react';
+import { Mail, CheckCircle, Edit2, X, Loader } from 'lucide-react';
 
 const ComplianceDirectoryPage = () => {
-  const { drivers, updateDriverStatus, triggerEmailReminder, updateDriverScore } = useFleetStore();
+  const { drivers, fetchDrivers, isLoading, updateDriverStatus, triggerEmailReminder, updateDriverScore } = useFleetStore();
   const [toast, setToast] = useState('');
   const [editScoreModal, setEditScoreModal] = useState({ isOpen: false, driverId: null, currentScore: 100 });
   const [newScore, setNewScore] = useState('');
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
 
   const getDaysToExpiry = (expiryDate) => {
     const today = new Date();
@@ -34,12 +38,16 @@ const ComplianceDirectoryPage = () => {
     setEditScoreModal({ isOpen: true, driverId: driver.id, driverName: driver.name });
   };
 
-  const handleSaveScore = (e) => {
+  const handleSaveScore = async (e) => {
     e.preventDefault();
-    updateDriverScore(editScoreModal.driverId, newScore);
-    setEditScoreModal({ isOpen: false, driverId: null });
-    setToast('Safety score updated successfully.');
-    setTimeout(() => setToast(''), 3000);
+    try {
+      await updateDriverScore(editScoreModal.driverId, newScore);
+      setEditScoreModal({ isOpen: false, driverId: null });
+      setToast('Safety score updated successfully.');
+      setTimeout(() => setToast(''), 3000);
+    } catch (err) {
+      alert("Failed to update safety score: " + err.message);
+    }
   };
 
   const getExpiryHighlight = (days) => {
@@ -57,6 +65,15 @@ const ComplianceDirectoryPage = () => {
       default: return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     }
   };
+
+  if (isLoading && drivers.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <Loader className="animate-spin text-orange-500" size={32} />
+        <span className="text-sm text-gray-400">Loading Drivers Directory...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 relative">

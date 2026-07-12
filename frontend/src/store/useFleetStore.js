@@ -324,10 +324,18 @@ const useFleetStore = create((set, get) => ({
     return `Reminder email successfully sent to ${driver?.name || 'Driver'}.`;
   },
   
-  updateDriverScore: (id, newScore) => {
-    set((state) => ({
-      drivers: state.drivers.map(d => d.id === id ? { ...d, safetyScore: Number(newScore) } : d)
-    }));
+  updateDriverScore: async (id, newScore) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post(`/api/drivers/${id}/safety-score`, { safety_score: Number(newScore) });
+      if (res.success) {
+        await get().fetchDrivers();
+      }
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
   fetchTrips: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {

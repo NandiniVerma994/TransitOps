@@ -90,6 +90,10 @@ type UpdateDriverStatusRequest struct {
 	Status string `json:"status"`
 }
 
+type UpdateDriverSafetyScoreRequest struct {
+	SafetyScore int `json:"safety_score"`
+}
+
 type PaginatedDrivers struct {
 	Data []Driver       `json:"data"`
 	Meta PaginationMeta `json:"meta"`

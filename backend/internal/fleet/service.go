@@ -840,5 +840,12 @@ func (s *Service) GetKPIStats(ctx context.Context) (KPIStats, error) {
 	return s.repo.GetKPIStats(ctx)
 }
 
+func (s *Service) UpdateDriverSafetyScore(ctx context.Context, id string, score int) error {
+	if score < 0 || score > 100 {
+		return fmt.Errorf("%w: safety score must be between 0 and 100", ErrValidation)
+	}
+	return s.repo.UpdateDriverSafetyScore(ctx, id, score)
+}
+
 
 

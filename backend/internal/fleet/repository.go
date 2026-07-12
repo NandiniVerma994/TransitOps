@@ -1148,3 +1148,13 @@ func (r *Repository) GetKPIStats(ctx context.Context) (KPIStats, error) {
 	return stats, nil
 }
 
+func (r *Repository) UpdateDriverSafetyScore(ctx context.Context, id string, score int) error {
+	q := db.GetQueryer(ctx, r.db)
+	_, err := q.ExecContext(ctx, `
+		UPDATE drivers
+		SET safety_score = $1, updated_at = now()
+		WHERE id = $2 AND deleted_at IS NULL;
+	`, score, id)
+	return err
+}
+
