@@ -15,12 +15,16 @@ import FuelExpensePage from './financial-analyst/pages/FuelExpensePage';
 import AnalyticsPage from './financial-analyst/pages/AnalyticsPage';
 
 
-// Decision router to display either the driver portal or the fleet manager dashboard
+// Decision router to display the customized dashboard per role
 const DashboardRouter = () => {
   const { user } = useAuthStore();
+  const role = user?.role?.toLowerCase();
 
-  if (user?.role?.toLowerCase() === 'driver') {
+  if (role === 'driver') {
     return <DriverDashboard />;
+  }
+  if (role === 'financial analyst') {
+    return <AnalyticsPage />;
   }
 
   return <FleetDashboardPage />;
@@ -98,13 +102,13 @@ function App() {
           } />
 
           <Route path="/expenses" element={
-            <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst']}>
+            <ProtectedRoute allowedRoles={['Financial Analyst']}>
               <FuelExpensePage />
             </ProtectedRoute>
           } />
 
           <Route path="/analytics" element={
-            <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst', 'Safety Officer']}>
+            <ProtectedRoute allowedRoles={['Financial Analyst']}>
               <AnalyticsPage />
             </ProtectedRoute>
           } />
