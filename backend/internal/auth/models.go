@@ -5,6 +5,7 @@ import "time"
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 type LoginRequest struct {
@@ -32,6 +33,17 @@ type userRecord struct {
 	PasswordHash string
 	RoleName     string
 	CreatedAt    time.Time
+}
+
+type CurrentUser struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+type roleRecord struct {
+	ID   string
+	Name string
 }
 
 func toAuthUser(user userRecord) AuthUser {

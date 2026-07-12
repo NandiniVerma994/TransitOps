@@ -19,6 +19,11 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/register", h.register)
 	mux.HandleFunc("POST /api/auth/login", h.login)
+	mux.Handle("GET /api/auth/me", h.service.RequireAuth(http.HandlerFunc(h.me)))
+	mux.Handle("GET /api/auth/fleet-manager-check", h.service.RequireRole(
+		http.HandlerFunc(h.rbacCheck),
+		"Fleet Manager",
+	))
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +56,22 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
+	user, ok := CurrentUserFromContext(r.Context())
+	if !ok {
+		httpx.WriteError(w, http.StatusUnauthorized, "missing authenticated user")
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, user)
+}
+
+func (h *Handler) rbacCheck(w http.ResponseWriter, r *http.Request) {
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{
+		"status": "allowed",
+	})
 }
 
 func writeAuthError(w http.ResponseWriter, err error) {

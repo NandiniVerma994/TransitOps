@@ -45,21 +45,21 @@ func (r *Repository) FindUserByEmail(ctx context.Context, email string) (userRec
 	return user, nil
 }
 
-func (r *Repository) FindRoleIDByName(ctx context.Context, name string) (string, error) {
-	var id string
+func (r *Repository) FindRoleByName(ctx context.Context, name string) (roleRecord, error) {
+	var role roleRecord
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id
+		SELECT id, name
 		FROM roles
-		WHERE name = $1;
-	`, name).Scan(&id)
+		WHERE lower(name) = lower($1);
+	`, name).Scan(&role.ID, &role.Name)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", errNotFound
+		return roleRecord{}, errNotFound
 	}
 	if err != nil {
-		return "", err
+		return roleRecord{}, err
 	}
 
-	return id, nil
+	return role, nil
 }
 
 func (r *Repository) CreateUser(ctx context.Context, params createUserParams) (userRecord, error) {

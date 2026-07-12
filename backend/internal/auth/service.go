@@ -33,6 +33,10 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthRe
 	if len(request.Password) < 8 {
 		return AuthResponse{}, fmt.Errorf("%w: password must be at least 8 characters", ErrValidation)
 	}
+	roleName := strings.TrimSpace(request.Role)
+	if roleName == "" {
+		roleName = s.defaultRoleName
+	}
 
 	_, err = s.repository.FindUserByEmail(ctx, email)
 	if err == nil {
@@ -42,9 +46,12 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthRe
 		return AuthResponse{}, err
 	}
 
-	roleID, err := s.repository.FindRoleIDByName(ctx, s.defaultRoleName)
+	role, err := s.repository.FindRoleByName(ctx, roleName)
+	if errors.Is(err, errNotFound) {
+		return AuthResponse{}, fmt.Errorf("%w: invalid role", ErrValidation)
+	}
 	if err != nil {
-		return AuthResponse{}, fmt.Errorf("find default role: %w", err)
+		return AuthResponse{}, fmt.Errorf("find role: %w", err)
 	}
 
 	passwordHash, err := hashPassword(request.Password)
@@ -55,8 +62,8 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthRe
 	user, err := s.repository.CreateUser(ctx, createUserParams{
 		Email:        email,
 		PasswordHash: passwordHash,
-		RoleID:       roleID,
-		RoleName:     s.defaultRoleName,
+		RoleID:       role.ID,
+		RoleName:     role.Name,
 	})
 	if err != nil {
 		return AuthResponse{}, err
