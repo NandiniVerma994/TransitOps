@@ -8,7 +8,8 @@ import FleetDashboardPage from './features/fleet/pages/FleetDashboardPage';
 import VehicleRegistryPage from './features/fleet/pages/VehicleRegistryPage';
 import DriverManagementPage from './features/fleet/pages/DriverManagementPage';
 import TripDispatcherPage from './features/fleet/pages/TripDispatcherPage';
-import SettingsPage from './features/auth/SettingsPage';
+import MaintenancePage from './features/fleet/pages/MaintenancePage';
+import DriverDashboard from './features/driver/DriverDashboard';
 
 function App() {
   const { checkSession, isCheckingSession } = useAuthStore();
@@ -35,6 +36,7 @@ function App() {
       <Routes>
         {/* Auth Route */}
         <Route path="/" element={<LoginPage />} />
+        <Route path="/driver-dashboard" element={<DriverDashboard />} />
         
         {/* Protected Dashboard Routes */}
         <Route 

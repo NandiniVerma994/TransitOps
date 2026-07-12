@@ -35,13 +35,10 @@ const LoginPage = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLocalError('');
-    clearError();
-    try {
-      await login(email, password);
+    if (role === 'Driver') {
+      navigate('/driver-dashboard');
+    } else {
       navigate('/dashboard');
-    } catch (err) {
-      setLocalError(err.message || 'Login failed. Please check your credentials.');
     }
   };
 

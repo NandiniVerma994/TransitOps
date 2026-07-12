@@ -18,9 +18,6 @@ const DashboardLayout = () => {
     { name: 'Drivers', path: '/drivers', icon: Users },
     { name: 'Trips', path: '/trips', icon: Map },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
-    { name: 'Fuel & Expenses', path: '/expenses', icon: Fuel },
-    { name: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   // RBAC permissions mapping: defining allowed items per role
