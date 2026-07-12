@@ -1,4 +1,7 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './store/useAuthStore';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import LoginPage from './features/auth/LoginPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import FleetDashboardPage from './features/fleet/pages/FleetDashboardPage';
@@ -9,6 +12,25 @@ import MaintenancePage from './features/fleet/pages/MaintenancePage';
 import DriverDashboard from './features/driver/DriverDashboard';
 
 function App() {
+  const { checkSession, isCheckingSession } = useAuthStore();
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen w-full bg-[#0a0a0a] flex flex-col justify-center items-center font-sans">
+        <div className="relative w-20 h-20 mb-6 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-xl border border-orange-500/30 animate-ping opacity-75"></div>
+          <div className="w-16 h-16 border-4 border-t-orange-500 border-r-transparent border-b-orange-500/20 border-l-transparent rounded-full animate-spin"></div>
+          <div className="absolute w-6 h-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-md"></div>
+        </div>
+        <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Initializing Session</p>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -16,13 +38,51 @@ function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/driver-dashboard" element={<DriverDashboard />} />
         
-        {/* Protected Dashboard Routes (Fleet Manager View) */}
-        <Route element={<DashboardLayout />}>
+        {/* Protected Dashboard Routes */}
+        <Route 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/dashboard" element={<FleetDashboardPage />} />
-          <Route path="/fleet" element={<VehicleRegistryPage />} />
-          <Route path="/drivers" element={<DriverManagementPage />} />
-          <Route path="/trips" element={<TripDispatcherPage />} />
-          <Route path="/maintenance" element={<MaintenancePage />} />
+          
+          <Route path="/fleet" element={
+            <ProtectedRoute allowedRoles={['Fleet Manager']}>
+              <VehicleRegistryPage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/drivers" element={
+            <ProtectedRoute allowedRoles={['Fleet Manager']}>
+              <DriverManagementPage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/trips" element={
+            <ProtectedRoute allowedRoles={['Fleet Manager', 'Driver']}>
+              <TripDispatcherPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Temporary placeholders for remaining tabs */}
+          <Route path="/maintenance" element={
+            <ProtectedRoute allowedRoles={['Fleet Manager']}>
+              <div className="text-white"><h2 className="text-2xl font-bold">Maintenance</h2></div>
+            </ProtectedRoute>
+          } />
+          <Route path="/expenses" element={
+            <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst']}>
+              <div className="text-white"><h2 className="text-2xl font-bold">Fuel & Expenses</h2></div>
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute allowedRoles={['Fleet Manager', 'Financial Analyst', 'Safety Officer']}>
+              <div className="text-white"><h2 className="text-2xl font-bold">Analytics</h2></div>
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
         {/* Fallback */}

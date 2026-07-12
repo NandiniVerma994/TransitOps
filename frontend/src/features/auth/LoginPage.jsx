@@ -1,14 +1,39 @@
 import React, { useState } from 'react';
 import { Truck, Map, ShieldCheck, LineChart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('Raven.k@transitops.in');
-  const [password, setPassword] = useState('********');
+  const { login, error: authError, clearError, isLoading: authLoading } = useAuthStore();
+  const [email, setEmail] = useState('fleet.manager@transitops.local');
+  const [password, setPassword] = useState('FleetManager@123');
   const [role, setRole] = useState('Fleet Manager');
+  const [localError, setLocalError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleRoleChange = (selectedRole) => {
+    setRole(selectedRole);
+    clearError();
+    setLocalError('');
+    if (selectedRole === 'Fleet Manager') {
+      setEmail('fleet.manager@transitops.local');
+      setPassword('FleetManager@123');
+    } else if (selectedRole === 'Safety Officer') {
+      setEmail('safety.officer@transitops.local');
+      setPassword('SafetyOfficer@123');
+    } else if (selectedRole === 'Financial Analyst') {
+      setEmail('finance.analyst@transitops.local');
+      setPassword('FinanceAnalyst@123');
+    } else if (selectedRole === 'Driver') {
+      setEmail('driver.alex@transitops.local');
+      setPassword('DriverAlex@123');
+    } else {
+      setEmail('');
+      setPassword('');
+    }
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (role === 'Driver') {
       navigate('/driver-dashboard');
@@ -127,7 +152,7 @@ const LoginPage = () => {
               <div className="relative group">
                 <select 
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => handleRoleChange(e.target.value)}
                   className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl px-5 py-4 text-sm text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all appearance-none cursor-pointer hover:border-[#444]"
                 >
                   <option value="Fleet Manager">Fleet Manager</option>
@@ -153,15 +178,23 @@ const LoginPage = () => {
                 <span className="text-sm text-gray-400 group-hover:text-gray-200 transition-colors">Remember me for 30 days</span>
               </label>
             </div>
+
+            {(localError || authError) && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs px-4 py-3 rounded-xl mb-4 flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+                <span>{localError || authError}</span>
+              </div>
+            )}
             
             {/* Submit Button */}
             <button 
               type="submit" 
-              className="w-full relative group overflow-hidden bg-orange-600 text-white font-semibold text-sm py-4 rounded-xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,88,12,0.4)] hover:-translate-y-0.5 active:translate-y-0"
+              disabled={authLoading}
+              className="w-full relative group overflow-hidden bg-orange-600 text-white font-semibold text-sm py-4 rounded-xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,88,12,0.4)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="relative z-10 flex items-center justify-center">
-                Sign In to Platform
-                <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                {authLoading ? 'Signing In...' : 'Sign In to Platform'}
+                {!authLoading && <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>}
               </span>
               <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
             </button>

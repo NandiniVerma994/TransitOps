@@ -1,9 +1,16 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Truck, Users, Map, Wrench, LogOut } from 'lucide-react';
+import { LayoutDashboard, Truck, Users, Map, Wrench, Fuel, BarChart3, Settings, LogOut } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -12,6 +19,18 @@ const DashboardLayout = () => {
     { name: 'Trips', path: '/trips', icon: Map },
     { name: 'Maintenance', path: '/maintenance', icon: Wrench },
   ];
+
+  // RBAC permissions mapping: defining allowed items per role
+  const rolePermissions = {
+    'fleet manager': ['Dashboard', 'Fleet', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expenses', 'Analytics', 'Settings'],
+    'driver': ['Dashboard', 'Trips', 'Settings'],
+    'safety officer': ['Dashboard', 'Drivers', 'Analytics', 'Settings'],
+    'financial analyst': ['Dashboard', 'Fuel & Expenses', 'Analytics', 'Settings'],
+  };
+
+  const userRole = user?.role?.toLowerCase() || '';
+  const allowedItems = rolePermissions[userRole] || ['Dashboard', 'Settings'];
+  const filteredNavItems = navItems.filter((item) => allowedItems.includes(item.name));
 
   return (
     <div className="flex h-screen bg-[#121212] text-gray-300 font-sans overflow-hidden">
@@ -22,7 +41,7 @@ const DashboardLayout = () => {
             <h1 className="text-xl font-bold text-white tracking-tight">TransitOps</h1>
           </div>
           <nav className="p-4 space-y-1">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.path}
@@ -43,7 +62,7 @@ const DashboardLayout = () => {
         
         <div className="p-4 border-t border-[#222]">
           <button 
-            onClick={() => navigate('/')}
+            onClick={handleLogout}
             className="flex items-center space-x-3 px-4 py-2.5 w-full text-left rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-colors"
           >
             <LogOut size={18} />
@@ -64,9 +83,9 @@ const DashboardLayout = () => {
             />
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-400">Raven K.</span>
+            <span className="text-sm text-gray-400">{user?.email || 'User'}</span>
             <div className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide flex items-center space-x-2">
-              <span>Fleet Manager</span>
+              <span>{user?.role || 'Guest'}</span>
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
             </div>
           </div>
