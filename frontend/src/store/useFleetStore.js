@@ -130,6 +130,19 @@ const useFleetStore = create((set, get) => ({
       drivers: state.drivers.map(d => d.id === trip.driverId ? { ...d, status: 'Available' } : d),
       expenses: fuelUsed > 0 ? [...state.expenses, { id: Date.now().toString(), type: 'Fuel', amount: fuelUsed, vehicleId: trip.vehicleId, date: new Date().toISOString() }] : state.expenses
     }));
+  },
+
+  // --- SAFETY ACTIONS ---
+  triggerEmailReminder: (driverId) => {
+    // Mock action to simulate an email sent
+    const driver = get().drivers.find(d => d.id === driverId);
+    return `Reminder email successfully sent to ${driver?.name || 'Driver'}.`;
+  },
+  
+  updateDriverScore: (id, newScore) => {
+    set((state) => ({
+      drivers: state.drivers.map(d => d.id === id ? { ...d, safetyScore: Number(newScore) } : d)
+    }));
   }
 }));
 

@@ -11,6 +11,8 @@ import TripDispatcherPage from './features/fleet/pages/TripDispatcherPage';
 import MaintenancePage from './features/fleet/pages/MaintenancePage';
 import DriverDashboard from './features/driver/DriverDashboard';
 import SettingsPage from './features/auth/SettingsPage';
+import SafetyDashboardPage from './features/safety/SafetyDashboardPage';
+import ComplianceDirectoryPage from './features/safety/ComplianceDirectoryPage';
 
 // Decision router to display either the driver portal or the fleet manager dashboard
 const DashboardRouter = () => {
@@ -20,7 +22,22 @@ const DashboardRouter = () => {
     return <DriverDashboard />;
   }
   
+  if (user?.role?.toLowerCase() === 'safety officer') {
+    return <SafetyDashboardPage />;
+  }
+  
   return <FleetDashboardPage />;
+};
+
+// Role-based router for Drivers tab
+const DriverRouter = () => {
+  const { user } = useAuthStore();
+  
+  if (user?.role?.toLowerCase() === 'safety officer') {
+    return <ComplianceDirectoryPage />;
+  }
+  
+  return <DriverManagementPage />;
 };
 
 // Layout decider: managers get the Sidebar layout; drivers get the full-screen view
@@ -77,8 +94,8 @@ function App() {
           } />
           
           <Route path="/drivers" element={
-            <ProtectedRoute allowedRoles={['Fleet Manager']}>
-              <DriverManagementPage />
+            <ProtectedRoute allowedRoles={['Fleet Manager', 'Safety Officer']}>
+              <DriverRouter />
             </ProtectedRoute>
           } />
           
