@@ -3,7 +3,6 @@ package auth
 import "time"
 
 type RegisterRequest struct {
-	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -15,7 +14,6 @@ type LoginRequest struct {
 
 type AuthUser struct {
 	ID        string    `json:"id"`
-	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
@@ -30,7 +28,6 @@ type AuthResponse struct {
 
 type userRecord struct {
 	ID           string
-	Name         string
 	Email        string
 	PasswordHash string
 	RoleName     string
@@ -40,7 +37,6 @@ type userRecord struct {
 func toAuthUser(user userRecord) AuthUser {
 	return AuthUser{
 		ID:        user.ID,
-		Name:      user.Name,
 		Email:     user.Email,
 		Role:      user.RoleName,
 		CreatedAt: user.CreatedAt,

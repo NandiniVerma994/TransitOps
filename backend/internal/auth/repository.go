@@ -11,7 +11,6 @@ type Repository struct {
 }
 
 type createUserParams struct {
-	Name         string
 	Email        string
 	PasswordHash string
 	RoleID       string
@@ -25,13 +24,12 @@ func NewRepository(db *sql.DB) *Repository {
 func (r *Repository) FindUserByEmail(ctx context.Context, email string) (userRecord, error) {
 	var user userRecord
 	err := r.db.QueryRowContext(ctx, `
-		SELECT u.id, u.name, u.email, u.password_hash, r.name, u.created_at
+		SELECT u.id, u.email, u.password_hash, r.name, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		WHERE lower(u.email) = lower($1);
 	`, email).Scan(
 		&user.ID,
-		&user.Name,
 		&user.Email,
 		&user.PasswordHash,
 		&user.RoleName,
@@ -67,12 +65,11 @@ func (r *Repository) FindRoleIDByName(ctx context.Context, name string) (string,
 func (r *Repository) CreateUser(ctx context.Context, params createUserParams) (userRecord, error) {
 	var user userRecord
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO users (name, email, password_hash, role_id)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, name, email, password_hash, created_at;
-	`, params.Name, params.Email, params.PasswordHash, params.RoleID).Scan(
+		INSERT INTO users (email, password_hash, role_id)
+		VALUES ($1, $2, $3)
+		RETURNING id, email, password_hash, created_at;
+	`, params.Email, params.PasswordHash, params.RoleID).Scan(
 		&user.ID,
-		&user.Name,
 		&user.Email,
 		&user.PasswordHash,
 		&user.CreatedAt,

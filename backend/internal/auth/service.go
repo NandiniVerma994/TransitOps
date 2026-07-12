@@ -26,13 +26,9 @@ func NewService(repository *Repository, jwtSecret string, tokenTTL time.Duration
 }
 
 func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthResponse, error) {
-	name := strings.TrimSpace(request.Name)
 	email, err := normalizeEmail(request.Email)
 	if err != nil {
 		return AuthResponse{}, err
-	}
-	if len(name) < 2 {
-		return AuthResponse{}, fmt.Errorf("%w: name must be at least 2 characters", ErrValidation)
 	}
 	if len(request.Password) < 8 {
 		return AuthResponse{}, fmt.Errorf("%w: password must be at least 8 characters", ErrValidation)
@@ -57,7 +53,6 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (AuthRe
 	}
 
 	user, err := s.repository.CreateUser(ctx, createUserParams{
-		Name:         name,
 		Email:        email,
 		PasswordHash: passwordHash,
 		RoleID:       roleID,
