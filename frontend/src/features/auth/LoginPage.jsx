@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Truck, Map, ShieldCheck, LineChart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('Raven.k@transitops.in');
@@ -12,8 +12,11 @@ const LoginPage = () => {
     e.preventDefault();
     console.log('Logging in with', { email, password, role });
     // TODO: Implement actual authentication
-    // For now, redirect to dashboard
-    navigate('/dashboard');
+    if (role === 'Financial Analyst') {
+      navigate('/financial-analyst/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const roles = [

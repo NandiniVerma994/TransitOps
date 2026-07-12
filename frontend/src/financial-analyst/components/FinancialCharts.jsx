@@ -1,8 +1,12 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,9 +15,15 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
 } from "recharts";
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  Receipt,
+  PiggyBank,
+  Gauge,
+} from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
 /*  Constants                                                                  */
@@ -22,6 +32,7 @@ import {
 const PALETTE = {
   revenue: "#34d399",
   expenses: "#f87171",
+  trend: "#38bdf8",
   grid: "#1e293b",
   axis: "#64748b",
   text: "#cbd5e1",
@@ -36,7 +47,12 @@ const DONUT_COLORS = [
   "#94a3b8", // Other
 ];
 
-const BAR_GRADIENT_ID = "costliestVehicleGradient";
+const KPI_ICONS = {
+  revenue: Wallet,
+  expenses: Receipt,
+  profit: PiggyBank,
+  efficiency: Gauge,
+};
 
 const currencyFormatter = (value) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
@@ -64,17 +80,17 @@ const compactCurrencyFormatter = (value) => {
 function ChartCard({ title, subtitle, children, className = "" }) {
   return (
     <div
-      className={`relative rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5 shadow-xl shadow-black/20 backdrop-blur-xl transition-all duration-300 hover:border-slate-600/60 hover:shadow-2xl hover:shadow-black/30 ${className}`}
+      className={`relative rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5 shadow-lg shadow-black/10 backdrop-blur-xl transition-all duration-300 hover:border-slate-600/60 hover:shadow-xl ${className}`}
     >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold tracking-wide text-slate-100">
-            {title}
-          </h3>
-          {subtitle && (
-            <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>
-          )}
-        </div>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold tracking-wide text-slate-100">
+          {title}
+        </h3>
+        {subtitle && (
+          <p className="mt-0.5 text-xs text-slate-400">
+            {subtitle}
+          </p>
+        )}
       </div>
       {children}
     </div>
@@ -83,20 +99,10 @@ function ChartCard({ title, subtitle, children, className = "" }) {
 
 function ChartSkeleton({ variant = "line" }) {
   return (
-    <div className="flex h-72 w-full animate-pulse flex-col justify-end gap-3 px-2">
-      {variant === "bar" ? (
-        <div className="flex h-full flex-col justify-around gap-3">
-          {[85, 65, 50, 40, 30].map((w, i) => (
-            <div
-              key={i}
-              className="h-6 rounded-full bg-slate-700/50"
-              style={{ width: `${w}%` }}
-            />
-          ))}
-        </div>
-      ) : variant === "donut" ? (
+    <div className="flex h-64 w-full animate-pulse flex-col justify-end gap-3 px-2">
+      {variant === "donut" ? (
         <div className="flex h-full items-center justify-center">
-          <div className="h-40 w-40 rounded-full border-[14px] border-slate-700/50" />
+          <div className="h-36 w-36 rounded-full border-[14px] border-slate-700/50" />
         </div>
       ) : (
         <div className="grid h-full grid-cols-12 items-end gap-2">
@@ -115,7 +121,7 @@ function ChartSkeleton({ variant = "line" }) {
 
 function EmptyState({ message = "No data available for this period" }) {
   return (
-    <div className="flex h-72 w-full flex-col items-center justify-center gap-3 text-center">
+    <div className="flex h-64 w-full flex-col items-center justify-center gap-3 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700/40">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -132,7 +138,9 @@ function EmptyState({ message = "No data available for this period" }) {
           />
         </svg>
       </div>
-      <p className="max-w-[220px] text-sm text-slate-400">{message}</p>
+      <p className="max-w-[220px] text-sm text-slate-400">
+        {message}
+      </p>
     </div>
   );
 }
@@ -182,6 +190,81 @@ function CustomLegend({ payload }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  KPI Summary Cards                                                          */
+/* -------------------------------------------------------------------------- */
+
+function KpiCard({ label, value, changePercent, icon, loading }) {
+  const Icon = KPI_ICONS[icon] || Wallet;
+  const isPositive = typeof changePercent === "number" && changePercent >= 0;
+  const hasChange = typeof changePercent === "number" && !Number.isNaN(changePercent);
+
+  if (loading) {
+    return (
+      <div className="animate-pulse rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5 shadow-lg shadow-black/10">
+        <div className="mb-3 h-4 w-24 rounded bg-slate-700/50" />
+        <div className="h-7 w-32 rounded bg-slate-700/50" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5 shadow-lg shadow-black/10 backdrop-blur-xl transition-all duration-300 hover:border-slate-600/60 hover:shadow-xl">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          {label}
+        </p>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+      <p className="text-2xl font-bold text-slate-100">
+        {typeof value === "number" ? currencyFormatter(value) : value}
+      </p>
+      {hasChange && (
+        <div
+          className={`mt-2 flex items-center gap-1 text-xs font-medium ${
+            isPositive ? "text-emerald-500" : "text-rose-500"
+          }`}
+        >
+          {isPositive ? (
+            <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+          ) : (
+            <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          <span>
+            {isPositive ? "+" : ""}
+            {changePercent.toFixed(1)}% vs last period
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KpiSummaryCards({ kpis, loading }) {
+  const hasKpis = Array.isArray(kpis) && kpis.length > 0;
+
+  if (!hasKpis && !loading) return null;
+
+  const cards = loading ? new Array(4).fill(null) : kpis;
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {cards.map((kpi, idx) => (
+        <KpiCard
+          key={kpi?.label || idx}
+          label={kpi?.label}
+          value={kpi?.value}
+          changePercent={kpi?.changePercent}
+          icon={kpi?.icon}
+          loading={loading}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*  1. Revenue vs Expenses Line Chart                                          */
 /* -------------------------------------------------------------------------- */
 
@@ -190,15 +273,15 @@ function RevenueExpensesChart({ data, loading }) {
 
   return (
     <ChartCard
-      title="Revenue vs. Expenses Trend"
-      subtitle="Monthly comparison of gross earnings and operational cost"
+      title="Revenue vs. Expenses"
+      subtitle="Gross earnings compared against operational cost"
     >
       {loading ? (
         <ChartSkeleton variant="line" />
       ) : !hasData ? (
         <EmptyState message="No revenue or expense records found for this range" />
       ) : (
-        <ResponsiveContainer width="100%" height={288}>
+        <ResponsiveContainer width="100%" height={264}>
           <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={PALETTE.grid} vertical={false} />
             <XAxis
@@ -250,7 +333,68 @@ function RevenueExpensesChart({ data, loading }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  2. Operational Expense Breakdown Donut Chart                              */
+/*  2. Monthly Expense Trend (Area Chart)                                     */
+/* -------------------------------------------------------------------------- */
+
+function MonthlyExpenseTrendChart({ data, loading }) {
+  const hasData = Array.isArray(data) && data.length > 0;
+
+  return (
+    <ChartCard
+      title="Monthly Expense Trend"
+      subtitle="Total operational spend across recent months"
+    >
+      {loading ? (
+        <ChartSkeleton variant="line" />
+      ) : !hasData ? (
+        <EmptyState message="No expense history available yet" />
+      ) : (
+        <ResponsiveContainer width="100%" height={264}>
+          <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="monthlyExpenseFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={PALETTE.trend} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={PALETTE.trend} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={PALETTE.grid} vertical={false} />
+            <XAxis
+              dataKey="month"
+              stroke={PALETTE.axis}
+              tick={{ fill: PALETTE.text, fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: PALETTE.grid }}
+            />
+            <YAxis
+              stroke={PALETTE.axis}
+              tick={{ fill: PALETTE.text, fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={compactCurrencyFormatter}
+              width={64}
+            />
+            <Tooltip
+              content={<CustomTooltip formatter={currencyFormatter} />}
+              cursor={{ stroke: PALETTE.axis, strokeDasharray: "4 4" }}
+            />
+            <Area
+              type="monotone"
+              dataKey="expense"
+              name="Total Expense"
+              stroke={PALETTE.trend}
+              strokeWidth={2.5}
+              fill="url(#monthlyExpenseFill)"
+              animationDuration={800}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  3. Expense Breakdown Donut Chart                                          */
 /* -------------------------------------------------------------------------- */
 
 function ExpenseBreakdownChart({ data, loading }) {
@@ -263,8 +407,9 @@ function ExpenseBreakdownChart({ data, loading }) {
 
   return (
     <ChartCard
-      title="Operational Expense Breakdown"
+      title="Expense Breakdown"
       subtitle="Distribution across fuel, maintenance, tolls, permits & fines"
+      className="lg:col-span-2 xl:col-span-1"
     >
       {loading ? (
         <ChartSkeleton variant="donut" />
@@ -272,23 +417,18 @@ function ExpenseBreakdownChart({ data, loading }) {
         <EmptyState message="No operational expenses logged yet" />
       ) : (
         <div className="relative">
-          <ResponsiveContainer width="100%" height={288}>
+          <ResponsiveContainer width="100%" height={264}>
             <PieChart>
-              <Tooltip
-                content={<CustomTooltip formatter={currencyFormatter} />}
-              />
-              <Legend
-                content={<CustomLegend />}
-                verticalAlign="bottom"
-              />
+              <Tooltip content={<CustomTooltip formatter={currencyFormatter} />} />
+              <Legend content={<CustomLegend />} verticalAlign="bottom" />
               <Pie
                 data={data}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
                 cy="45%"
-                innerRadius={68}
-                outerRadius={98}
+                innerRadius={62}
+                outerRadius={90}
                 paddingAngle={3}
                 cornerRadius={6}
                 animationDuration={800}
@@ -297,14 +437,14 @@ function ExpenseBreakdownChart({ data, loading }) {
                   <Cell
                     key={entry.name || index}
                     fill={DONUT_COLORS[index % DONUT_COLORS.length]}
-                    stroke="#0f172a"
+                    stroke="var(--chart-card-bg, #0f172a)"
                     strokeWidth={2}
                   />
                 ))}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          <div className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 text-center">
+          <div className="pointer-events-none absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 text-center">
             <p className="text-xs text-slate-400">Total</p>
             <p className="text-lg font-bold text-slate-100">
               {compactCurrencyFormatter(total)}
@@ -317,44 +457,89 @@ function ExpenseBreakdownChart({ data, loading }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  3. Top 5 Costliest Vehicles Horizontal Bar Chart                           */
+/*  Monthly Revenue (Bar Chart) — used on the Reports & Analytics page        */
 /* -------------------------------------------------------------------------- */
 
-function CostliestVehiclesChart({ data, loading }) {
+/**
+ * MonthlyRevenueChart
+ * Simple monthly revenue bar chart for the combined Reports & Analytics page.
+ * Exported separately so it can be composed alongside other analytics charts.
+ */
+export function MonthlyRevenueChart({ data, loading, className = "" }) {
   const hasData = Array.isArray(data) && data.length > 0;
 
-  const sorted = useMemo(
-    () =>
-      hasData
-        ? [...data].sort((a, b) => b.cost - a.cost).slice(0, 5)
-        : [],
-    [data, hasData]
+  return (
+    <ChartCard title="Monthly Revenue" subtitle="Gross trip revenue trend across recent months" className={className}>
+      {loading ? (
+        <ChartSkeleton variant="line" />
+      ) : !hasData ? (
+        <EmptyState message="No revenue records found for this range" />
+      ) : (
+        <ResponsiveContainer width="100%" height={264}>
+          <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }} barCategoryGap={18}>
+            <CartesianGrid strokeDasharray="3 3" stroke={PALETTE.grid} vertical={false} />
+            <XAxis
+              dataKey="period"
+              stroke={PALETTE.axis}
+              tick={{ fill: PALETTE.text, fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: PALETTE.grid }}
+            />
+            <YAxis
+              stroke={PALETTE.axis}
+              tick={{ fill: PALETTE.text, fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={compactCurrencyFormatter}
+              width={64}
+            />
+            <Tooltip
+              content={<CustomTooltip formatter={currencyFormatter} />}
+              cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+            />
+            <Bar dataKey="revenue" name="Revenue" radius={[6, 6, 0, 0]} animationDuration={800}>
+              {data.map((entry, index) => (
+                <Cell key={entry.period || index} fill={PALETTE.revenue} fillOpacity={0.55 + (index / data.length) * 0.45} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  4. Cost-Intensive Vehicles (Horizontal Bar Chart)                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * CostIntensiveVehiclesChart
+ * Ranks the top vehicles consuming the highest operational budget.
+ * Exported separately so it can be composed into the dashboard layout
+ * alongside (rather than inside) the KPI/trend grid.
+ */
+export function CostIntensiveVehiclesChart({ data, loading, className = "" }) {
+  const hasData = Array.isArray(data) && data.length > 0;
 
   return (
     <ChartCard
-      title="Top 5 Cost-Intensive Vehicles"
-      subtitle="Vehicles consuming the highest share of operational budget"
-      className="lg:col-span-2"
+      title="Cost-Intensive Vehicles"
+      subtitle="Top 5 vehicles consuming the highest operational budget"
+      className={className}
     >
       {loading ? (
-        <ChartSkeleton variant="bar" />
-      ) : sorted.length === 0 ? (
-        <EmptyState message="No vehicle cost data available" />
+        <ChartSkeleton variant="line" />
+      ) : !hasData ? (
+        <EmptyState message="No vehicle cost data available yet" />
       ) : (
-        <ResponsiveContainer width="100%" height={288}>
+        <ResponsiveContainer width="100%" height={264}>
           <BarChart
-            data={sorted}
+            data={data}
             layout="vertical"
-            margin={{ top: 8, right: 24, left: 0, bottom: 0 }}
-            barCategoryGap={18}
+            margin={{ top: 8, right: 24, left: 8, bottom: 0 }}
+            barCategoryGap={14}
           >
-            <defs>
-              <linearGradient id={BAR_GRADIENT_ID} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#fb923c" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#f87171" stopOpacity={0.9} />
-              </linearGradient>
-            </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={PALETTE.grid} horizontal={false} />
             <XAxis
               type="number"
@@ -366,25 +551,25 @@ function CostliestVehiclesChart({ data, loading }) {
             />
             <YAxis
               type="category"
-              dataKey="vehicle"
+              dataKey="name"
               stroke={PALETTE.axis}
               tick={{ fill: PALETTE.text, fontSize: 12 }}
               tickLine={false}
               axisLine={false}
-              width={90}
+              width={72}
             />
             <Tooltip
               content={<CustomTooltip formatter={currencyFormatter} />}
               cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
             />
-            <Bar
-              dataKey="cost"
-              name="Total Cost"
-              fill={`url(#${BAR_GRADIENT_ID})`}
-              radius={[0, 6, 6, 0]}
-              barSize={22}
-              animationDuration={800}
-            />
+            <Bar dataKey="cost" name="Operational Cost" radius={[0, 6, 6, 0]} animationDuration={800}>
+              {data.map((entry, index) => (
+                <Cell
+                  key={entry.name || index}
+                  fill={index === 0 ? "#fb7185" : index === 1 ? "#fb923c" : "#38bdf8"}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -399,30 +584,32 @@ function CostliestVehiclesChart({ data, loading }) {
 /**
  * FinancialCharts
  *
- * Renders the three core visualizations for the Financial Analyst
- * dashboard: Revenue vs Expenses trend, Operational Expense breakdown,
- * and Top 5 Cost-Intensive Vehicles.
+ * Renders the Financial Analyst dashboard summary: KPI cards, Revenue vs
+ * Expenses, Monthly Expense Trend, and Expense Breakdown.
  *
  * @param {Object} props
- * @param {Array<{ period: string, revenue: number, expenses: number }>} props.revenueExpenseData
- * @param {Array<{ name: string, value: number }>} props.expenseBreakdownData
- * @param {Array<{ vehicle: string, cost: number }>} props.costliestVehiclesData
+ * @param {Array<{ label: string, value: number, changePercent?: number, icon?: 'revenue'|'expenses'|'profit'|'efficiency' }>} [props.kpis]
+ * @param {Array<{ period: string, revenue: number, expenses: number }>} [props.revenueExpenseData]
+ * @param {Array<{ month: string, expense: number }>} [props.monthlyExpenseTrendData]
+ * @param {Array<{ name: string, value: number }>} [props.expenseBreakdownData]
  * @param {boolean} [props.loading=false]
  */
 export default function FinancialCharts({
+  kpis = [],
   revenueExpenseData = [],
+  monthlyExpenseTrendData = [],
   expenseBreakdownData = [],
-  costliestVehiclesData = [],
   loading = false,
 }) {
   return (
-    <section
-      className="grid grid-cols-1 gap-5 lg:grid-cols-2"
-      style={{ backgroundColor: "transparent" }}
-    >
-      <RevenueExpensesChart data={revenueExpenseData} loading={loading} />
-      <ExpenseBreakdownChart data={expenseBreakdownData} loading={loading} />
-      <CostliestVehiclesChart data={costliestVehiclesData} loading={loading} />
-    </section>
+    <div className="flex flex-col gap-5">
+      <KpiSummaryCards kpis={kpis} loading={loading} />
+
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <RevenueExpensesChart data={revenueExpenseData} loading={loading} />
+        <MonthlyExpenseTrendChart data={monthlyExpenseTrendData} loading={loading} />
+        <ExpenseBreakdownChart data={expenseBreakdownData} loading={loading} />
+      </section>
+    </div>
   );
 }
