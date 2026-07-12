@@ -14,9 +14,23 @@ const currentUserKey contextKey = "current_user"
 
 func (s *Service) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, ok := bearerToken(r.Header.Get("Authorization"))
+		var token string
+		var ok bool
+
+		// 1. Try to get token from HTTP-only cookie
+		cookie, err := r.Cookie("access_token")
+		if err == nil && cookie.Value != "" {
+			token = cookie.Value
+			ok = true
+		}
+
+		// 2. Fallback to Authorization header
 		if !ok {
-			httpx.WriteError(w, http.StatusUnauthorized, "missing bearer token")
+			token, ok = bearerToken(r.Header.Get("Authorization"))
+		}
+
+		if !ok {
+			httpx.WriteError(w, http.StatusUnauthorized, "missing authentication token")
 			return
 		}
 
@@ -34,7 +48,7 @@ func (s *Service) RequireAuth(next http.Handler) http.Handler {
 func (s *Service) RequireRole(next http.Handler, roles ...string) http.Handler {
 	allowedRoles := make(map[string]struct{}, len(roles))
 	for _, role := range roles {
-		allowedRoles[role] = struct{}{}
+		allowedRoles[strings.ToLower(strings.TrimSpace(role))] = struct{}{}
 	}
 
 	return s.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +58,8 @@ func (s *Service) RequireRole(next http.Handler, roles ...string) http.Handler {
 			return
 		}
 
-		if _, ok := allowedRoles[user.Role]; !ok {
+		userRole := strings.ToLower(strings.TrimSpace(user.Role))
+		if _, ok := allowedRoles[userRole]; !ok {
 			httpx.WriteError(w, http.StatusForbidden, "insufficient role")
 			return
 		}
